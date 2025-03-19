@@ -119,9 +119,15 @@
                 const timeoutId = setTimeout(() => controller.abort(), 2000);
                 let response = await fetch(url, { method: 'HEAD', signal: controller.signal });
                 clearTimeout(timeoutId);
-                return response.status === 200;
+                if (response.status === 200) {
+                    return { url, status: 200 };
+                } else if (response.status >= 300 && response.status < 400) {
+                    return { url, status: response.status };
+                } else {
+                    return { url, status: 'invalid' };
+                }
             } catch {
-                return false;
+                return { url, status: 'invalid' };
             }
         }
 
@@ -164,17 +170,22 @@
             currentChecking.textContent = "Starting link checks...";
 
             const lines = text.split('\n');
-            let cleanedM3U = "";
+            let validLinks = [];
+            let redirectLinks = [];
 
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
                 if (line.startsWith("http")) {
-                    let isValid = await checkLink(line);
-                    if (isValid) {
-                        cleanedM3U += lines[i - 1] + '\n' + line + '\n';
+                    let result = await checkLink(line);
+                    if (result.status === 200) {
+                        validLinks.push(lines[i - 1] + '\n' + line + '\n');
+                    } else if (result.status >= 300 && result.status < 400) {
+                        redirectLinks.push(lines[i - 1] + '\n' + line + '\n');
                     }
                 }
             }
+
+            let cleanedM3U = validLinks.join('') + redirectLinks.join('');
             
             document.getElementById('output').value = cleanedM3U;
             if (cleanedM3U.trim()) {
