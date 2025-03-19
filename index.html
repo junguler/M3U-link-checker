@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>M3U Link Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 10px;
+            background-color: #121212;
+            color: #ffffff;
+        }
+        h1 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        .container {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+            width: 600px;
+            margin: auto;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        textarea, input {
+            width: 540px; /* Adjusted width for input boxes */
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background-color: #333;
+            color: #ffffff;
+        }
+        button {
+            width: 120px; /* Set width for buttons */
+            margin-left: 10px;
+            padding: 10px 0; /* Adjusted padding for buttons */
+            border-radius: 5px;
+            border: 1px solid #888;
+            background-color: #888;
+            color: white;
+            cursor: pointer;
+            height: 40px; /* Set height for buttons */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        button:hover {
+            background-color: #aaa;
+        }
+        pre {
+            text-align: left;
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 200px;
+            color: #ffffff;
+        }
+        .output-container {
+            position: relative;
+        }
+        #downloadLink {
+            display: block;
+            margin: 10px auto;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid #888;
+            border-radius: 5px;
+            background-color: #333;
+        }
+        #downloadLink:hover {
+            background-color: #444;
+        }
+        #output {
+            width: 580px;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background-color: #333;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>M3U Link Checker</h1>
+        <div class="input-group">
+            <input type="file" id="fileInput" accept=".m3u">
+            <button onclick="processM3U()">Check local file</button>
+        </div>
+        <div class="input-group">
+            <input type="text" id="urlInput" placeholder="Enter online M3U URL...">
+            <button onclick="processOnlineM3U()">Check Online Link</button>
+        </div>
+        <div class="input-group">
+            <textarea id="textInput" rows="3" placeholder="Paste M3U content here..."></textarea>
+            <button onclick="processTextM3U()">Check Pasted streams</button>
+        </div>
+        <div class="output-container">
+            <textarea id="output" rows="5" readonly></textarea>
+            <p id="currentChecking"></p>
+        </div>
+        <a id="downloadLink" style="display:none">Download Checked Playlist</a>
+    </div>
+
+    <script>
+        async function checkLink(url) {
+            document.getElementById('currentChecking').textContent = `Checking: ${url}`;
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                let response = await fetch(url, { method: 'HEAD', signal: controller.signal });
+                clearTimeout(timeoutId);
+                return response.status === 200;
+            } catch {
+                return false;
+            }
+        }
+
+        async function processM3U() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files.length) return alert('Please upload an M3U file.');
+
+            const file = fileInput.files[0];
+            const text = await file.text();
+            await processLinks(text);
+        }
+
+        async function processOnlineM3U() {
+            const urlInput = document.getElementById('urlInput').value.trim();
+            if (!urlInput) return alert('Please enter an online M3U URL.');
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                let response = await fetch(urlInput, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) throw new Error('Failed to fetch M3U file');
+                let text = await response.text();
+                await processLinks(text);
+            } catch (error) {
+                alert(`Error fetching online M3U file: ${error.message}. Please check the URL or try again later.`);
+            }
+        }
+
+        async function processTextM3U() {
+            const textInput = document.getElementById('textInput').value;
+            if (!textInput.trim()) return alert('Please paste M3U content.');
+            await processLinks(textInput);
+        }
+
+        async function processLinks(text) {
+            const currentChecking = document.getElementById('currentChecking');
+            const downloadLink = document.getElementById('downloadLink');
+            currentChecking.textContent = "Starting link checks...";
+
+            const lines = text.split('\n');
+            let cleanedM3U = "";
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (line.startsWith("http")) {
+                    let isValid = await checkLink(line);
+                    if (isValid) {
+                        cleanedM3U += lines[i - 1] + '\n' + line + '\n';
+                    }
+                }
+            }
+            
+            document.getElementById('output').value = cleanedM3U;
+            if (cleanedM3U.trim()) {
+                let blob = new Blob([cleanedM3U], { type: 'text/plain' });
+                let url = URL.createObjectURL(blob);
+                downloadLink.href = url;
+                downloadLink.download = 'cleaned_playlist.m3u';
+                downloadLink.style.display = 'block';
+            } else {
+                downloadLink.style.display = 'none';
+            }
+
+            currentChecking.textContent = "Check complete.";
+        }
+    </script>
+</body>
+</html>
