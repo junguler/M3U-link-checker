@@ -9,6 +9,7 @@
             margin: 10px;
             background-color: #121212;
             color: #ffffff;
+            border-radius: 0px;
         }
         h1 {
             color: #ffffff;
@@ -17,7 +18,6 @@
         .container {
             background: #1e1e1e;
             padding: 10px;
-            border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
             width: 600px;
             margin: auto;
@@ -25,27 +25,25 @@
         .input-group {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
+            /* margin-bottom: 10px; */
         }
         textarea, input {
-            width: 540px; /* Adjusted width for input boxes */
+            width: 540px;
             margin: 5px 0;
             padding: 10px;
-            border-radius: 5px;
             border: 1px solid #333;
             background-color: #333;
             color: #ffffff;
         }
         button {
-            width: 120px; /* Set width for buttons */
+            width: 120px;
             margin-left: 10px;
-            padding: 10px 0; /* Adjusted padding for buttons */
-            border-radius: 5px;
+            /* padding: 10px 0; */
             border: 1px solid #888;
             background-color: #888;
             color: white;
             cursor: pointer;
-            height: 40px; /* Set height for buttons */
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -53,39 +51,15 @@
         button:hover {
             background-color: #aaa;
         }
-        pre {
-            text-align: left;
-            background: #333;
-            padding: 10px;
-            border-radius: 5px;
-            overflow-x: auto;
-            max-height: 200px;
-            color: #ffffff;
+        .cancel-button {
+            display: none;
+            background-color: #d9534f;
         }
-        .output-container {
-            position: relative;
+        .cancel-button:hover {
+            background-color: #c9302c;
         }
-        #downloadLink {
-            display: block;
-            margin: 10px auto;
-            color: #ffffff;
-            text-decoration: none;
-            padding: 10px 20px;
-            border: 1px solid #888;
-            border-radius: 5px;
-            background-color: #333;
-        }
-        #downloadLink:hover {
-            background-color: #444;
-        }
-        #output {
-            width: 580px;
-            margin: 5px 0;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #333;
-            background-color: #333;
-            color: #ffffff;
+        a {
+            color: white;
         }
     </style>
 </head>
@@ -94,111 +68,115 @@
         <h1>M3U Link Checker</h1>
         <div class="input-group">
             <input type="file" id="fileInput" accept=".m3u">
-            <button onclick="processM3U()">Check local file</button>
+            <button id="fileCheckButton" onclick="processM3U()">Check local file</button>
+            <button id="fileCancelButton" class="cancel-button" onclick="cancelProcess('file')">Cancel</button>
         </div>
         <div class="input-group">
             <input type="text" id="urlInput" placeholder="Enter online M3U URL...">
-            <button onclick="processOnlineM3U()">Check Online Link</button>
+            <button id="urlCheckButton" onclick="processOnlineM3U()">Check Online Link</button>
+            <button id="urlCancelButton" class="cancel-button" onclick="cancelProcess('url')">Cancel</button>
         </div>
         <div class="input-group">
             <textarea id="textInput" rows="3" placeholder="Paste M3U content here..."></textarea>
-            <button onclick="processTextM3U()">Check Pasted streams</button>
+            <button id="textCheckButton" onclick="processTextM3U()">Check Pasted streams</button>
+            <button id="textCancelButton" class="cancel-button" onclick="cancelProcess('text')">Cancel</button>
         </div>
         <div class="output-container">
-            <textarea id="output" rows="5" readonly></textarea>
-            <p id="currentChecking"></p>
+            <textarea style="width: 580px; height: 100px;" id="output" rows="10" readonly></textarea>
+            <p style="overflow: hidden;" id="currentChecking"></p>
         </div>
         <a id="downloadLink" style="display:none">Download Checked Playlist</a>
     </div>
 
     <script>
-        async function checkLink(url) {
+        let controllers = {};
+        let isCancelled = {};
+
+        function toggleButtons(type, checking) {
+            document.getElementById(`${type}CheckButton`).style.display = checking ? 'none' : 'flex';
+            document.getElementById(`${type}CancelButton`).style.display = checking ? 'flex' : 'none';
+        }
+
+        function resetOutput() {
+            document.getElementById('output').value = '';
+            document.getElementById('downloadLink').style.display = 'none';
+        }
+
+        async function checkLink(url, type) {
+            if (isCancelled[type]) return null;
             document.getElementById('currentChecking').textContent = `Checking: ${url}`;
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000);
-                let response = await fetch(url, { method: 'HEAD', signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (response.status === 200) {
-                    return { url, status: 200 };
-                } else if (response.status >= 300 && response.status < 400) {
-                    return { url, status: response.status };
-                } else {
-                    return { url, status: 'invalid' };
-                }
+                controllers[type] = controller;
+                const response = await fetch(url, { method: 'HEAD', signal: controller.signal });
+                return response.ok ? { url, status: response.status } : { url, status: 'invalid' };
             } catch {
                 return { url, status: 'invalid' };
+            }
+        }
+
+        async function processLinks(text, type) {
+            resetOutput();
+            toggleButtons(type, true);
+            isCancelled[type] = false;
+            const lines = text.split('\n');
+            let validLinks = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                if (isCancelled[type]) break;
+                let line = lines[i].trim();
+                if (line.startsWith("http")) {
+                    let stationName = i > 0 ? lines[i - 1].trim() : 'Unknown Station';
+                    let result = await checkLink(line, type);
+                    if (result && (result.status === 200 || (result.status >= 300 && result.status < 400))) {
+                        validLinks.push(stationName + '\n' + line + '\n');
+                    }
+                }
+            }
+
+            document.getElementById('output').value = validLinks.join('');
+            toggleButtons(type, false);
+            document.getElementById('currentChecking').textContent = isCancelled[type] ? "Check cancelled." : "Check complete.";
+            if (validLinks.length > 0) {
+                let blob = new Blob([validLinks.join('')], { type: 'text/plain' });
+                let url = URL.createObjectURL(blob);
+                let downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = url;
+                downloadLink.download = 'checked_playlist.m3u';
+                downloadLink.style.display = 'block';
             }
         }
 
         async function processM3U() {
             const fileInput = document.getElementById('fileInput');
             if (!fileInput.files.length) return alert('Please upload an M3U file.');
-
-            const file = fileInput.files[0];
-            const text = await file.text();
-            await processLinks(text);
+            const text = await fileInput.files[0].text();
+            await processLinks(text, 'file');
         }
 
         async function processOnlineM3U() {
             const urlInput = document.getElementById('urlInput').value.trim();
             if (!urlInput) return alert('Please enter an online M3U URL.');
-            
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                let response = await fetch(urlInput, { signal: controller.signal });
-                clearTimeout(timeoutId);
-                
+                const response = await fetch(urlInput);
                 if (!response.ok) throw new Error('Failed to fetch M3U file');
                 let text = await response.text();
-                await processLinks(text);
+                await processLinks(text, 'url');
             } catch (error) {
-                alert(`Error fetching online M3U file: ${error.message}. Please check the URL or try again later.`);
+                alert(`Error fetching online M3U file: ${error.message}`);
             }
         }
 
         async function processTextM3U() {
             const textInput = document.getElementById('textInput').value;
             if (!textInput.trim()) return alert('Please paste M3U content.');
-            await processLinks(textInput);
+            await processLinks(textInput, 'text');
         }
 
-        async function processLinks(text) {
-            const currentChecking = document.getElementById('currentChecking');
-            const downloadLink = document.getElementById('downloadLink');
-            currentChecking.textContent = "Starting link checks...";
-
-            const lines = text.split('\n');
-            let validLinks = [];
-            let redirectLinks = [];
-
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
-                if (line.startsWith("http")) {
-                    let result = await checkLink(line);
-                    if (result.status === 200) {
-                        validLinks.push(lines[i - 1] + '\n' + line + '\n');
-                    } else if (result.status >= 300 && result.status < 400) {
-                        redirectLinks.push(lines[i - 1] + '\n' + line + '\n');
-                    }
-                }
-            }
-
-            let cleanedM3U = validLinks.join('') + redirectLinks.join('');
-            
-            document.getElementById('output').value = cleanedM3U;
-            if (cleanedM3U.trim()) {
-                let blob = new Blob([cleanedM3U], { type: 'text/plain' });
-                let url = URL.createObjectURL(blob);
-                downloadLink.href = url;
-                downloadLink.download = 'cleaned_playlist.m3u';
-                downloadLink.style.display = 'block';
-            } else {
-                downloadLink.style.display = 'none';
-            }
-
-            currentChecking.textContent = "Check complete.";
+        function cancelProcess(type) {
+            isCancelled[type] = true;
+            if (controllers[type]) controllers[type].abort();
+            toggleButtons(type, false);
         }
     </script>
 </body>
