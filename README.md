@@ -1,5 +1,5 @@
 # M3U-link-checker
-wrestle with artifical dumbness (chat gpt 40) for a few hours to create a m3u link checker, this page has 3 main functions
+wrestle with artifical dumbness (chat gpt 4o) for a few hours to create a m3u link checker, this page has 3 main functions
 
 * check local file: upload a m3u playlist and click this button to check it
 * check online link: input the link of a m3u playlist (the raw file from github for example) and click the button to check it
