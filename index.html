@@ -68,18 +68,18 @@
         <h1>M3U Link Checker</h1>
         <div class="input-group">
             <input type="file" id="fileInput" accept=".m3u">
-            <button id="fileCheckButton" onclick="processM3U()">Check local file</button>
-            <button id="fileCancelButton" class="cancel-button" onclick="cancelProcess('file')">Cancel</button>
+            <button id="fileCheckButton">Check local file</button>
+            <button id="fileCancelButton" class="cancel-button">Cancel</button>
         </div>
         <div class="input-group">
             <input type="text" id="urlInput" placeholder="Enter online M3U URL...">
-            <button id="urlCheckButton" onclick="processOnlineM3U()">Check Online Link</button>
-            <button id="urlCancelButton" class="cancel-button" onclick="cancelProcess('url')">Cancel</button>
+            <button id="urlCheckButton">Check Online Link</button>
+            <button id="urlCancelButton" class="cancel-button">Cancel</button>
         </div>
         <div class="input-group">
             <textarea id="textInput" rows="3" placeholder="Paste M3U content here..."></textarea>
-            <button id="textCheckButton" onclick="processTextM3U()">Check Pasted streams</button>
-            <button id="textCancelButton" class="cancel-button" onclick="cancelProcess('text')">Cancel</button>
+            <button id="textCheckButton">Check Pasted streams</button>
+            <button id="textCancelButton" class="cancel-button">Cancel</button>
         </div>
         <div class="output-container">
             <textarea style="width: 580px; height: 100px;" id="output" rows="10" readonly></textarea>
@@ -89,95 +89,117 @@
     </div>
 
     <script>
-        let controllers = {};
-        let isCancelled = {};
+        document.addEventListener('DOMContentLoaded', () => {
+            const elements = {
+                fileInput: document.getElementById('fileInput'),
+                urlInput: document.getElementById('urlInput'),
+                textInput: document.getElementById('textInput'),
+                fileCheckButton: document.getElementById('fileCheckButton'),
+                urlCheckButton: document.getElementById('urlCheckButton'),
+                textCheckButton: document.getElementById('textCheckButton'),
+                fileCancelButton: document.getElementById('fileCancelButton'),
+                urlCancelButton: document.getElementById('urlCancelButton'),
+                textCancelButton: document.getElementById('textCancelButton'),
+                output: document.getElementById('output'),
+                currentChecking: document.getElementById('currentChecking'),
+                downloadLink: document.getElementById('downloadLink')
+            };
 
-        function toggleButtons(type, checking) {
-            document.getElementById(`${type}CheckButton`).style.display = checking ? 'none' : 'flex';
-            document.getElementById(`${type}CancelButton`).style.display = checking ? 'flex' : 'none';
-        }
+            let controllers = {};
+            let isCancelled = {};
 
-        function resetOutput() {
-            document.getElementById('output').value = '';
-            document.getElementById('downloadLink').style.display = 'none';
-        }
-
-        async function checkLink(url, type) {
-            if (isCancelled[type]) return null;
-            document.getElementById('currentChecking').textContent = `Checking: ${url}`;
-            try {
-                const controller = new AbortController();
-                controllers[type] = controller;
-                const response = await fetch(url, { method: 'HEAD', signal: controller.signal });
-                return response.ok ? { url, status: response.status } : { url, status: 'invalid' };
-            } catch {
-                return { url, status: 'invalid' };
+            function toggleButtons(type, checking) {
+                elements[`${type}CheckButton`].style.display = checking ? 'none' : 'flex';
+                elements[`${type}CancelButton`].style.display = checking ? 'flex' : 'none';
             }
-        }
 
-        async function processLinks(text, type) {
-            resetOutput();
-            toggleButtons(type, true);
-            isCancelled[type] = false;
-            const lines = text.split('\n');
-            let validLinks = [];
+            function resetOutput() {
+                elements.output.value = '';
+                elements.downloadLink.style.display = 'none';
+            }
 
-            for (let i = 0; i < lines.length; i++) {
-                if (isCancelled[type]) break;
-                let line = lines[i].trim();
-                if (line.startsWith("http")) {
-                    let stationName = i > 0 ? lines[i - 1].trim() : 'Unknown Station';
-                    let result = await checkLink(line, type);
-                    if (result && (result.status === 200 || (result.status >= 300 && result.status < 400))) {
-                        validLinks.push(stationName + '\n' + line + '\n');
-                    }
+            async function checkLink(url, type) {
+                if (isCancelled[type]) return null;
+                elements.currentChecking.textContent = `Checking: ${url}`;
+                try {
+                    const controller = new AbortController();
+                    controllers[type] = controller;
+                    const response = await fetch(url, { method: 'HEAD', signal: controller.signal });
+                    return response.ok ? { url, status: response.status } : { url, status: 'invalid' };
+                } catch {
+                    return { url, status: 'invalid' };
                 }
             }
 
-            document.getElementById('output').value = validLinks.join('');
-            toggleButtons(type, false);
-            document.getElementById('currentChecking').textContent = isCancelled[type] ? "Check cancelled." : "Check complete.";
-            if (validLinks.length > 0) {
-                let blob = new Blob([validLinks.join('')], { type: 'text/plain' });
-                let url = URL.createObjectURL(blob);
-                let downloadLink = document.getElementById('downloadLink');
-                downloadLink.href = url;
-                downloadLink.download = 'checked_playlist.m3u';
-                downloadLink.style.display = 'block';
+            async function processLinks(text, type) {
+                resetOutput();
+                toggleButtons(type, true);
+                isCancelled[type] = false;
+                const lines = text.split('\n');
+                let validLinks = [];
+
+                for (let i = 0; i < lines.length; i++) {
+                    if (isCancelled[type]) break;
+                    let line = lines[i].trim();
+                    if (line.startsWith("http")) {
+                        let stationName = i > 0 ? lines[i - 1].trim() : 'Unknown Station';
+                        let result = await checkLink(line, type);
+                        if (result && (result.status === 200 || (result.status >= 300 && result.status < 400))) {
+                            validLinks.push(stationName + '\n' + line + '\n');
+                        }
+                    }
+                }
+
+                elements.output.value = validLinks.join('');
+                toggleButtons(type, false);
+                elements.currentChecking.textContent = isCancelled[type] ? "Check cancelled." : "Check complete.";
+                if (validLinks.length > 0) {
+                    let blob = new Blob([validLinks.join('')], { type: 'text/plain' });
+                    let url = URL.createObjectURL(blob);
+                    elements.downloadLink.href = url;
+                    elements.downloadLink.download = 'checked_playlist.m3u';
+                    elements.downloadLink.style.display = 'block';
+                }
             }
-        }
 
-        async function processM3U() {
-            const fileInput = document.getElementById('fileInput');
-            if (!fileInput.files.length) return alert('Please upload an M3U file.');
-            const text = await fileInput.files[0].text();
-            await processLinks(text, 'file');
-        }
-
-        async function processOnlineM3U() {
-            const urlInput = document.getElementById('urlInput').value.trim();
-            if (!urlInput) return alert('Please enter an online M3U URL.');
-            try {
-                const response = await fetch(urlInput);
-                if (!response.ok) throw new Error('Failed to fetch M3U file');
-                let text = await response.text();
-                await processLinks(text, 'url');
-            } catch (error) {
-                alert(`Error fetching online M3U file: ${error.message}`);
+            async function processM3U() {
+                if (!elements.fileInput.files.length) return alert('Please upload an M3U file.');
+                const text = await elements.fileInput.files[0].text();
+                await processLinks(text, 'file');
             }
-        }
 
-        async function processTextM3U() {
-            const textInput = document.getElementById('textInput').value;
-            if (!textInput.trim()) return alert('Please paste M3U content.');
-            await processLinks(textInput, 'text');
-        }
+            async function processOnlineM3U() {
+                const url = elements.urlInput.value.trim();
+                if (!url) return alert('Please enter an online M3U URL.');
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('Failed to fetch M3U file');
+                    const text = await response.text();
+                    await processLinks(text, 'url');
+                } catch (error) {
+                    alert(`Error fetching online M3U file: ${error.message}`);
+                }
+            }
 
-        function cancelProcess(type) {
-            isCancelled[type] = true;
-            if (controllers[type]) controllers[type].abort();
-            toggleButtons(type, false);
-        }
+            async function processTextM3U() {
+                const text = elements.textInput.value;
+                if (!text.trim()) return alert('Please paste M3U content.');
+                await processLinks(text, 'text');
+            }
+
+            function cancelProcess(type) {
+                isCancelled[type] = true;
+                if (controllers[type]) controllers[type].abort();
+                toggleButtons(type, false);
+            }
+
+            elements.fileCheckButton.addEventListener('click', processM3U);
+            elements.urlCheckButton.addEventListener('click', processOnlineM3U);
+            elements.textCheckButton.addEventListener('click', processTextM3U);
+            elements.fileCancelButton.addEventListener('click', () => cancelProcess('file'));
+            elements.urlCancelButton.addEventListener('click', () => cancelProcess('url'));
+            elements.textCancelButton.addEventListener('click', () => cancelProcess('text'));
+        });
     </script>
 </body>
 </html>
