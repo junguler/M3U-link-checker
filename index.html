@@ -6,7 +6,7 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            margin: 10px;
+/*            margin: 10px;*/
             background-color: #121212;
             color: #ffffff;
             border-radius: 0px;
@@ -19,26 +19,26 @@
             background: #1e1e1e;
             padding: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-            width: 600px;
+            width: 620px; /* Increased by 10px */
             margin: auto;
         }
         .input-group {
             display: flex;
             align-items: center;
-            /* margin-bottom: 10px; */
+/*            margin: 5px;*/
         }
         textarea, input {
-            width: 540px;
+            flex-grow: 1;
             margin: 5px 0;
             padding: 10px;
             border: 1px solid #333;
             background-color: #333;
             color: #ffffff;
+            box-sizing: border-box;
         }
         button {
             width: 120px;
             margin-left: 10px;
-            /* padding: 10px 0; */
             border: 1px solid #888;
             background-color: #888;
             color: white;
@@ -47,6 +47,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+/*            padding: 0 10px;*/
+            box-sizing: border-box;
+            text-align: center;
         }
         button:hover {
             background-color: #aaa;
@@ -58,8 +62,71 @@
         .cancel-button:hover {
             background-color: #c9302c;
         }
-        a {
+
+        /* Styling for the Download button */
+        #downloadButton {
+            display: none; /* Hidden by default */
+            width: 200px;
+            margin: 10px auto; /* Center button with auto margins */
+            height: 40px;
             color: white;
+            background-color: #4CAF50; /* Green color */
+            border: 1px solid #4CAF50;
+        }
+        #downloadButton:hover {
+            background-color: #45a049;
+        }
+
+        .output-wrapper {
+            position: relative; /* Establishes context for absolute positioning */
+            width: 620px; /* Increased by 10px */
+            height: 110px; /* Increased by 10px for default height */
+            margin: 5px auto 10px auto;
+            border: 1px solid #333;
+            box-sizing: border-box;
+            background-color: #333;
+            overflow: hidden; /* Contains children, especially if they resize */
+        }
+        /* Styles for the output textarea */
+        .output-wrapper textarea#output {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0 10px;
+            border: none;
+            background-color: transparent;
+            color: #ffffff;
+            box-sizing: border-box;
+            resize: both; /* Allow both horizontal and vertical resizing */
+            overflow: auto; /* Ensure scrollbars appear if content overflows */
+            display: block;
+            min-width: 100%; /* Prevent shrinking smaller than wrapper */
+            min-height: 100%; /* Prevent shrinking smaller than wrapper */
+            overflow: hidden;
+        }
+        /* Styles for the currentChecking element */
+        .output-wrapper p#currentChecking {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 10px;
+            border: none;
+            background-color: #333;
+/*            color: #ffffff;*/
+            box-sizing: border-box;
+            text-align: left;
+            white-space: pre-wrap;
+            overflow: auto; /* Ensure scrollbars appear if content overflows */
+            text-overflow: ellipsis; /* Still useful for single lines that hit max width before wrapping */
+            display: none;
+            min-width: 100%; /* Prevent shrinking smaller than wrapper */
+            min-height: 100%; /* Prevent shrinking smaller than wrapper */
         }
     </style>
 </head>
@@ -67,391 +134,355 @@
     <div class="container">
         <h1>M3U Link Checker</h1>
         <div class="input-group">
-            <input type="file" id="fileInput" accept=".m3u,.m3u8,.txt">
-            <button id="fileCheckButton">Check local file</button>
-            <button id="fileCancelButton" class="cancel-button">Cancel</button>
+            <input type="file" id="fileInput" accept=".m3u,.m3u8">
+            <button id="fileCheckButton" onclick="processM3U()">Check local file</button>
+            <button id="fileCancelButton" class="cancel-button" onclick="cancelProcess('file')">Cancel</button>
         </div>
         <div class="input-group">
             <input type="text" id="urlInput" placeholder="Enter online M3U URL...">
-            <button id="urlCheckButton">Check Online Link</button>
-            <button id="urlCancelButton" class="cancel-button">Cancel</button>
+            <button id="urlCheckButton" onclick="processOnlineM3U()">Check Online Link</button>
+            <button id="urlCancelButton" class="cancel-button" onclick="cancelProcess('url')">Cancel</button>
         </div>
         <div class="input-group">
             <textarea id="textInput" rows="3" placeholder="Paste M3U content here..."></textarea>
-            <button id="textCheckButton">Check Pasted streams</button>
-            <button id="textCancelButton" class="cancel-button">Cancel</button>
+            <button id="textCheckButton" onclick="processTextM3U()">Check Pasted streams</button>
+            <button id="textCancelButton" class="cancel-button" onclick="cancelProcess('text')">Cancel</button>
         </div>
-        <div class="output-container">
-            <textarea style="width: 580px; height: 100px;" id="output" rows="10" readonly></textarea>
-            <p style="overflow: hidden;" id="currentChecking"></p>
+        <div class="output-wrapper">
+            <textarea id="output" rows="10" readonly></textarea>
+            <p id="currentChecking"></p>
         </div>
-        <a id="downloadLink" style="display:none">Download Checked Playlist</a>
+        <button id="downloadButton" onclick="document.getElementById('downloadLink').click();">Download Checked Playlist</button>
+        <a id="downloadLink" style="display:none"></a>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const elements = {
-                fileInput: document.getElementById('fileInput'),
-                urlInput: document.getElementById('urlInput'),
-                textInput: document.getElementById('textInput'),
-                fileCheckButton: document.getElementById('fileCheckButton'),
-                urlCheckButton: document.getElementById('urlCheckButton'),
-                textCheckButton: document.getElementById('textCheckButton'),
-                fileCancelButton: document.getElementById('fileCancelButton'),
-                urlCancelButton: document.getElementById('urlCancelButton'),
-                textCancelButton: document.getElementById('textCancelButton'),
-                output: document.getElementById('output'),
-                currentChecking: document.getElementById('currentChecking'),
-                downloadLink: document.getElementById('downloadLink')
-            };
+        let controllers = {};
+        let isCancelled = {};
+        let totalLinksToProcess = 0;
+        let linksProcessedCount = 0;
+        const concurrencyLimit = 10;
+        const linkTimeout = 3000;
 
-            // Config
-            const MAX_CONCURRENCY = Math.min(12, (navigator.hardwareConcurrency || 8));
-            const REQUEST_TIMEOUT_MS = 8000;
+        const tempValidLinks = new Map();
 
-            // Task registry per type
-            const tasks = {
-                file: null,
-                url: null,
-                text: null
-            };
+        function setDisplayStates(checkingInProgress) {
+            const outputElement = document.getElementById('output');
+            const currentCheckingElement = document.getElementById('currentChecking');
+            const downloadButton = document.getElementById('downloadButton');
 
-            // For cleaning up object URLs
-            let lastDownloadObjectURL = null;
-
-            function toggleButtons(type, checking) {
-                elements[`${type}CheckButton`].style.display = checking ? 'none' : 'flex';
-                elements[`${type}CancelButton`].style.display = checking ? 'flex' : 'none';
+            if (checkingInProgress) {
+                outputElement.style.display = 'none';
+                currentCheckingElement.style.display = 'block';
+                downloadButton.style.display = 'none';
+            } else {
+                outputElement.style.display = 'block';
+                currentCheckingElement.style.display = 'none';
+                // Download button visibility handled by processLinks completion logic
             }
+        }
 
-            function resetOutput() {
-                elements.output.value = '';
-                elements.currentChecking.textContent = '';
-                elements.downloadLink.style.display = 'none';
-                // Clean old download URL if any
-                if (lastDownloadObjectURL) {
-                    URL.revokeObjectURL(lastDownloadObjectURL);
-                    lastDownloadObjectURL = null;
+        function toggleButtons(type, checking) {
+            document.getElementById(`${type}CheckButton`).style.display = checking ? 'none' : 'flex';
+            document.getElementById(`${type}CancelButton`).style.display = checking ? 'flex' : 'none';
+
+            setDisplayStates(checking);
+
+            const otherTypes = ['file', 'url', 'text'].filter(t => t !== type);
+            otherTypes.forEach(otherType => {
+                const checkButton = document.getElementById(`${otherType}CheckButton`);
+                const inputElement = document.getElementById(`${otherType}Input`) || document.getElementById(`${otherType}Input`);
+                if (checkButton) checkButton.disabled = checking;
+                if (inputElement) inputElement.disabled = checking;
+                if (otherType === 'file') {
+                    const fileInput = document.getElementById('fileInput');
+                    if (fileInput) fileInput.disabled = checking;
                 }
+            });
+            if (type !== 'text') {
+                document.getElementById('textInput').disabled = checking;
+            }
+        }
+
+        function resetOutput() {
+            document.getElementById('output').value = '';
+            document.getElementById('downloadButton').style.display = 'none';
+            document.getElementById('currentChecking').textContent = '';
+            setDisplayStates(false);
+            totalLinksToProcess = 0;
+            linksProcessedCount = 0;
+            tempValidLinks.clear();
+        }
+
+        function updateCheckingStatus(currentItemTitle, currentItemUrl) {
+            linksProcessedCount++;
+            const currentCheckingElement = document.getElementById('currentChecking');
+            let message = `Checking link ${linksProcessedCount} of ${totalLinksToProcess}:`;
+            if (currentItemTitle && currentItemTitle.trim() !== '') {
+                const match = currentItemTitle.match(/,(.*?)$/);
+                message += `\n${match ? match[1].trim() : currentItemTitle.replace(/^#EXTINF.*?,/, '').trim()}`;
+            }
+            message += `\n${currentItemUrl}`;
+
+            currentCheckingElement.textContent = message;
+        }
+
+        async function checkSingleLink(item, type) {
+            if (isCancelled[type]) {
+                return { url: item.url, status: 'cancelled' };
             }
 
-            function startTask(type) {
-                cancelProcess(type); // abort any previous task of same type
-                tasks[type] = {
-                    aborted: false,
-                    controllers: new Set(),
-                    type
-                };
-                toggleButtons(type, true);
-                resetOutput();
-                return tasks[type];
-            }
+            const controller = new AbortController();
+            controllers[item.url] = controller;
 
-            function cancelProcess(type) {
-                const task = tasks[type];
-                if (!task) {
-                    toggleButtons(type, false);
-                    return;
-                }
-                task.aborted = true;
-                for (const c of task.controllers) {
-                    try { c.abort(); } catch {}
-                }
-                task.controllers.clear();
-                toggleButtons(type, false);
-                elements.currentChecking.textContent = 'Check cancelled.';
-            }
+            const timeoutPromise = new Promise((resolve) =>
+                setTimeout(() => {
+                    controller.abort();
+                    resolve({ url: item.url, status: 'timedout' });
+                }, linkTimeout)
+            );
 
-            // Throttle function to reduce DOM churn on progress updates
-            function throttle(fn, ms) {
-                let last = 0;
-                let timer = null;
-                let lastArgs;
-                return (...args) => {
-                    const now = Date.now();
-                    lastArgs = args;
-                    if (now - last >= ms) {
-                        last = now;
-                        fn(...args);
-                    } else if (!timer) {
-                        const delay = ms - (now - last);
-                        timer = setTimeout(() => {
-                            timer = null;
-                            last = Date.now();
-                            fn(...lastArgs);
-                        }, delay);
+            const fetchPromise = fetch(item.url, { method: 'HEAD', signal: controller.signal })
+                .then(response => ({ url: item.url, status: response.status }))
+                .catch(error => {
+                    if (error.name === 'AbortError') {
+                        return { url: item.url, status: 'aborted' };
                     }
-                };
-            }
+                    return { url: item.url, status: 'invalid' };
+                });
 
-            // Fetch helper with timeout and controller registration
-            function fetchWithTimeout(resource, options, task) {
-                const controller = new AbortController();
-                task.controllers.add(controller);
-                const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-                const merged = Object.assign({ redirect: 'follow' }, options, { signal: controller.signal });
-                return fetch(resource, merged)
-                    .finally(() => {
-                        clearTimeout(timeoutId);
-                        task.controllers.delete(controller);
+            try {
+                const result = await Promise.race([fetchPromise, timeoutPromise]);
+                if (isCancelled[type]) return { url: item.url, status: 'cancelled' };
+                return result;
+            } finally {
+                delete controllers[item.url];
+                updateCheckingStatus(item.title, item.url);
+            }
+        }
+
+        async function processLinks(m3uContent, type, originalFileName = 'checked_playlist.m3u') {
+            resetOutput();
+            toggleButtons(type, true);
+            isCancelled[type] = false;
+            document.getElementById('currentChecking').textContent = 'Starting link check...';
+
+            const originalLines = m3uContent.split('\n');
+            const linksToProcess = [];
+
+            let currentTitle = '';
+            let currentTitleLineIndex = -1;
+
+            for (let i = 0; i < originalLines.length; i++) {
+                const line = originalLines[i].trim();
+
+                if (line.startsWith('#EXTINF')) {
+                    currentTitle = line;
+                    currentTitleLineIndex = i;
+                } else if (line.startsWith("http")) {
+                    linksToProcess.push({
+                        title: currentTitle,
+                        url: line,
+                        originalIndex: i,
+                        originalTitleLineIndex: currentTitleLineIndex
                     });
-            }
-
-            // Check a URL (HEAD then GET fallback) -> {url, ok, status}
-            async function checkUrl(url, task) {
-                if (task.aborted) return { url, ok: false, aborted: true };
-
-                try {
-                    // First try HEAD
-                    const headRes = await fetchWithTimeout(url, { method: 'HEAD', cache: 'no-store' }, task);
-                    if (headRes.ok || (headRes.status >= 300 && headRes.status < 400)) {
-                        return { url, ok: true, status: headRes.status };
-                    }
-
-                    // Some servers don't allow HEAD or require GET
-                    if ([400, 401, 403, 405, 406, 501].includes(headRes.status)) {
-                        // Fallback to a tiny GET (Range)
-                        try {
-                            const getRes = await fetchWithTimeout(
-                                url,
-                                {
-                                    method: 'GET',
-                                    headers: { 'Range': 'bytes=0-0', 'Accept': '*/*' },
-                                    cache: 'no-store'
-                                },
-                                task
-                            );
-                            if (getRes.ok || getRes.status === 206 || (getRes.status >= 300 && getRes.status < 400)) {
-                                return { url, ok: true, status: getRes.status };
-                            }
-                            return { url, ok: false, status: getRes.status };
-                        } catch (e2) {
-                            return { url, ok: false, error: e2.message };
-                        }
-                    }
-
-                    return { url, ok: false, status: headRes.status };
-                } catch (e) {
-                    // Network/CORS/timeout error
-                    return { url, ok: false, error: e.message };
+                    currentTitle = '';
+                    currentTitleLineIndex = -1;
                 }
             }
 
-            // Simple worker pool for parallel checks
-            async function checkAllUrls(urls, task, progressCb) {
-                const results = new Map();
-                let index = 0;
-                let completed = 0;
-                const total = urls.length;
+            totalLinksToProcess = linksToProcess.length;
+            linksProcessedCount = 0;
 
-                const worker = async () => {
-                    while (!task.aborted) {
-                        const i = index++;
-                        if (i >= total) break;
-                        const url = urls[i];
-
-                        // Skip if already checked (another worker may have done it)
-                        if (results.has(url)) {
-                            completed++;
-                            progressCb(completed, total, url);
-                            continue;
-                        }
-
-                        const res = await checkUrl(url, task);
-                        if (!results.has(url)) {
-                            results.set(url, res);
-                        }
-                        completed++;
-                        progressCb(completed, total, url);
-                    }
-                };
-
-                const workers = new Array(Math.min(MAX_CONCURRENCY, Math.max(1, total))).fill(0).map(worker);
-                await Promise.all(workers);
-                return results;
-            }
-
-            // Parse M3U content into entries while keeping metadata
-            function parseM3U(text) {
-                const lines = text.replace(/\r/g, '').split('\n');
-                const entries = [];
-                let lastExtinf = null;
-                let pendingOpts = [];
-
-                for (let raw of lines) {
-                    const line = (raw || '').trim();
-                    if (!line) continue;
-
-                    if (line.startsWith('#EXTINF')) {
-                        lastExtinf = line;
-                        pendingOpts = [];
-                        continue;
-                    }
-                    if (line.startsWith('#EXTVLCOPT')) {
-                        pendingOpts.push(line);
-                        continue;
-                    }
-                    if (line.startsWith('#')) {
-                        // ignore other comments/tags for output in this tool
-                        continue;
-                    }
-
-                    // Non-comment -> consider as URL if it looks like one
-                    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(line)) {
-                        const isHttp = /^https?:/i.test(line);
-                        const entry = {
-                            url: line,
-                            extinf: lastExtinf,
-                            name: extractNameFromExtinf(lastExtinf) || deriveNameFromUrl(line),
-                            vlcopts: pendingOpts.slice(0),
-                            isCheckable: isHttp
-                        };
-                        entries.push(entry);
-                        lastExtinf = null;
-                        pendingOpts = [];
-                    }
+            if (totalLinksToProcess === 0) {
+                document.getElementById('currentChecking').textContent = "No stream links found in the M3U content.";
+                let outputContent = originalLines.filter(line => line.trim() !== '').join('\n');
+                if (outputContent.trim() === '' || !outputContent.trim().startsWith("#EXTM3U")) {
+                    outputContent = "#EXTM3U\n" + outputContent;
                 }
-                return entries;
-            }
-
-            function extractNameFromExtinf(extinf) {
-                if (!extinf) return null;
-                const tvgName = extinf.match(/tvg-name="([^"]+)"/i);
-                if (tvgName) return tvgName[1].trim();
-                const comma = extinf.indexOf(',');
-                if (comma >= 0 && comma < extinf.length - 1) {
-                    return extinf.slice(comma + 1).trim();
-                }
-                return null;
-            }
-
-            function deriveNameFromUrl(url) {
-                try {
-                    const u = new URL(url);
-                    const last = u.pathname.split('/').filter(Boolean).pop() || u.hostname;
-                    return decodeURIComponent((last || '').replace(/\.[^/.]+$/, '')).replace(/[_-]+/g, ' ') || u.hostname;
-                } catch {
-                    return url;
-                }
-            }
-
-            function buildM3U(entries, validUrlSet) {
-                // Keep original order, only include valid http(s)
-                const out = ['#EXTM3U'];
-                for (const e of entries) {
-                    if (!e.isCheckable) continue;
-                    if (!validUrlSet.has(e.url)) continue;
-                    out.push(e.extinf || `#EXTINF:-1,${e.name || 'Unknown Station'}`);
-                    if (e.vlcopts && e.vlcopts.length) out.push(...e.vlcopts);
-                    out.push(e.url);
-                }
-                return out.join('\n') + '\n';
-            }
-
-            const updateProgress = throttle((completed, total, currentUrl) => {
-                elements.currentChecking.textContent = `Checking ${completed}/${total}${currentUrl ? `: ${currentUrl}` : ''}`;
-            }, 120);
-
-            async function runCheckFromText(type, text, preStartedTask = null) {
-                const task = preStartedTask || startTask(type);
-                const entries = parseM3U(text);
-                const httpEntries = entries.filter(e => e.isCheckable);
-                const uniqueUrls = Array.from(new Set(httpEntries.map(e => e.url)));
-
-                if (task.aborted) {
-                    toggleButtons(type, false);
-                    return;
-                }
-
-                if (uniqueUrls.length === 0) {
-                    elements.currentChecking.textContent = 'No HTTP(S) URLs found to check.';
-                    elements.output.value = '#EXTM3U\n';
-                    toggleButtons(type, false);
-                    return;
-                }
-
-                elements.currentChecking.textContent = `Checking 0/${uniqueUrls.length}...`;
-
-                const results = await checkAllUrls(uniqueUrls, task, updateProgress);
-                if (task.aborted) {
-                    toggleButtons(type, false);
-                    return;
-                }
-
-                const validUrlSet = new Set();
-                for (const [url, res] of results.entries()) {
-                    if (res && res.ok) validUrlSet.add(url);
-                }
-
-                const outputText = buildM3U(entries, validUrlSet);
-                elements.output.value = outputText;
-
-                // Download link
-                if (outputText.trim().length > 0 && validUrlSet.size > 0) {
-                    const blob = new Blob([outputText], { type: 'text/plain' });
-                    const url = URL.createObjectURL(blob);
-                    lastDownloadObjectURL = url;
-                    elements.downloadLink.href = url;
-                    elements.downloadLink.download = 'checked_playlist.m3u';
-                    elements.downloadLink.style.display = 'block';
-                } else {
-                    elements.downloadLink.style.display = 'none';
-                }
-
-                elements.currentChecking.textContent = `Check complete. Valid: ${validUrlSet.size}/${uniqueUrls.length}`;
+                document.getElementById('output').value = outputContent;
                 toggleButtons(type, false);
+                return;
             }
 
-            // Actions
-            async function processM3U() {
-                if (!elements.fileInput.files.length) return alert('Please upload an M3U file.');
-                const task = startTask('file');
-                try {
-                    const text = await elements.fileInput.files[0].text();
-                    if (task.aborted) return;
-                    await runCheckFromText('file', text, task);
-                } catch (e) {
-                    toggleButtons('file', false);
-                    alert('Error reading file: ' + (e?.message || e));
+            const activePromises = new Set();
+
+            for (let i = 0; i < linksToProcess.length; i++) {
+                if (isCancelled[type]) break;
+
+                const item = linksToProcess[i];
+                const promise = checkSingleLink(item, type).then(result => {
+                    if (isCancelled[type]) {
+                         // Even if cancelled, we still want to record previous valid items
+                    } else if (result && (result.status === 200 || (result.status >= 300 && result.status < 400))) {
+                        tempValidLinks.set(item.originalIndex, {
+                            titleLine: item.title,
+                            urlLine: item.url
+                        });
+                    }
+                    activePromises.delete(promise);
+                    return result;
+                });
+
+                activePromises.add(promise);
+
+                if (activePromises.size >= concurrencyLimit) {
+                    await Promise.race(Array.from(activePromises));
                 }
             }
 
-            async function processOnlineM3U() {
-                const srcUrl = elements.urlInput.value.trim();
-                if (!srcUrl) return alert('Please enter an online M3U URL.');
+            await Promise.allSettled(Array.from(activePromises));
 
-                const task = startTask('url');
-                try {
-                    elements.currentChecking.textContent = 'Fetching playlist...';
-                    const res = await fetchWithTimeout(srcUrl, { method: 'GET' }, task);
-                    if (task.aborted) return;
-                    if (!res.ok) throw new Error(`Failed to fetch M3U file (status ${res.status})`);
-                    const text = await res.text();
-                    if (task.aborted) return;
-                    await runCheckFromText('url', text, task);
-                } catch (e) {
-                    toggleButtons('url', false);
-                    elements.currentChecking.textContent = '';
-                    alert(`Error fetching online M3U file: ${e?.message || e}`);
+            let validLinksContent = [];
+            const finalOutputLines = new Set();
+
+            validLinksContent.push("#EXTM3U");
+            finalOutputLines.add("#EXTM3U");
+
+            for (let i = 0; i < originalLines.length; i++) {
+                const line = originalLines[i].trim();
+
+                if (line.startsWith("#EXTM3U")) {
+                    if (i === 0) continue;
+                    else continue;
+                }
+
+                if (line.startsWith('#EXTINF')) {
+                    const nextLineIndex = i + 1;
+                    if (nextLineIndex < originalLines.length) {
+                        const nextLine = originalLines[nextLineIndex].trim();
+                        if (nextLine.startsWith('http') && tempValidLinks.has(nextLineIndex)) {
+                            const { titleLine, urlLine } = tempValidLinks.get(nextLineIndex);
+                            if (!finalOutputLines.has(titleLine)) {
+                                validLinksContent.push(titleLine);
+                                finalOutputLines.add(titleLine);
+                            }
+                            if (!finalOutputLines.has(urlLine)) {
+                                validLinksContent.push(urlLine);
+                                finalOutputLines.add(urlLine);
+                            }
+                            i = nextLineIndex;
+                        }
+                    }
+                } else if (line.startsWith('http')) {
+                    if (tempValidLinks.has(i)) {
+                         const { urlLine } = tempValidLinks.get(i);
+                         if (!finalOutputLines.has(urlLine)) {
+                            validLinksContent.push(urlLine);
+                            finalOutputLines.add(urlLine);
+                        }
+                    }
+                } else {
+                    if (line.trim() !== '' && !finalOutputLines.has(line)) {
+                        validLinksContent.push(line);
+                        finalOutputLines.add(line);
+                    }
                 }
             }
 
-            async function processTextM3U() {
-                const raw = elements.textInput.value || '';
-                if (!raw.trim()) return alert('Please paste M3U content.');
-                const task = startTask('text');
-                await runCheckFromText('text', raw, task);
+            document.getElementById('output').value = validLinksContent.join('\n');
+            toggleButtons(type, false);
+            const validStreamCount = validLinksContent.filter(l => l.startsWith('http')).length;
+            document.getElementById('currentChecking').textContent = isCancelled[type] ? "Check cancelled. Showing partial results." : `Check complete. Found ${validStreamCount} valid streams out of ${totalLinksToProcess}.`;
+
+            if (validLinksContent.filter(l => l.startsWith('http')).length > 0) {
+                const blob = new Blob([validLinksContent.join('\n')], { type: 'audio/x-mpegurl' });
+                const url = URL.createObjectURL(blob);
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = url;
+                downloadLink.download = getOutputFileName(type, originalFileName);
+                document.getElementById('downloadButton').style.display = 'block';
+            } else {
+                 document.getElementById('downloadButton').style.display = 'none';
+            }
+        }
+
+        function getOutputFileName(type, originalName) {
+            let baseName = originalName;
+            if (type === 'file') {
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput.files.length > 0) {
+                    baseName = fileInput.files[0].name;
+                }
+            } else if (type === 'url') {
+                const urlInput = document.getElementById('urlInput').value.trim();
+                try {
+                    const url = new URL(urlInput);
+                    const pathParts = url.pathname.split('/');
+                    baseName = pathParts[pathParts.length - 1] || 'playlist.m3u';
+                    baseName = baseName.split('?')[0];
+                } catch (e) {
+                    baseName = 'playlist.m3u';
+                }
+            } else {
+                baseName = 'pasted_streams.m3u';
             }
 
-            // Wire up events
-            elements.fileCheckButton.addEventListener('click', processM3U);
-            elements.urlCheckButton.addEventListener('click', processOnlineM3U);
-            elements.textCheckButton.addEventListener('click', processTextM3U);
+            if (!baseName.endsWith('.m3u') && !baseName.endsWith('.m3u8')) {
+                baseName += '.m3u';
+            }
 
-            elements.fileCancelButton.addEventListener('click', () => cancelProcess('file'));
-            elements.urlCancelButton.addEventListener('click', () => cancelProcess('url'));
-            elements.textCancelButton.addEventListener('click', () => cancelProcess('text'));
-        });
+            const lastDotIndex = baseName.lastIndexOf('.');
+            if (lastDotIndex !== -1) {
+                return `${baseName.substring(0, lastDotIndex)}_checked${baseName.substring(lastDotIndex)}`;
+            }
+            return `${baseName}_checked.m3u`;
+        }
+
+
+        async function processM3U() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files.length) return alert('Please upload an M3U file.');
+            const fileName = fileInput.files[0].name;
+            const text = await fileInput.files[0].text();
+            await processLinks(text, 'file', fileName);
+        }
+
+        async function processOnlineM3U() {
+            const urlInput = document.getElementById('urlInput').value.trim();
+            if (!urlInput) return alert('Please enter an online M3U URL.');
+            try {
+                const controller = new AbortController();
+                controllers['urlFetch'] = controller;
+                document.getElementById('currentChecking').textContent = "Fetching online M3U file...";
+                setDisplayStates(true);
+                const response = await fetch(urlInput, { signal: controller.signal });
+                if (!response.ok) throw new Error(`Failed to fetch M3U file: ${response.status} ${response.statusText}`);
+                const text = await response.text();
+                await processLinks(text, 'url', urlInput);
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    document.getElementById('currentChecking').textContent = "Online M3U fetch cancelled.";
+                } else {
+                    alert(`Error fetching online M3U file: ${error.message}`);
+                    document.getElementById('currentChecking').textContent = "Error fetching online M3U file.";
+                }
+                toggleButtons('url', false);
+                resetOutput();
+            } finally {
+                delete controllers['urlFetch'];
+            }
+        }
+
+        async function processTextM3U() {
+            const textInput = document.getElementById('textInput').value;
+            if (!textInput.trim()) return alert('Please paste M3U content.');
+            await processLinks(textInput, 'text', 'pasted_streams.m3u');
+        }
+
+        function cancelProcess(type) {
+            isCancelled[type] = true;
+            if (type === 'url' && controllers['urlFetch']) {
+                controllers['urlFetch'].abort();
+            }
+            for (const url in controllers) {
+                if (controllers.hasOwnProperty(url)) {
+                    controllers[url].abort();
+                }
+            }
+            // `processLinks` will detect `isCancelled` and proceed to display partial results.
+            // The `currentChecking` message will be updated in `processLinks`'s final step.
+        }
     </script>
 </body>
 </html>
