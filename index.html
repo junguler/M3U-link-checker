@@ -6,7 +6,6 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-/*            margin: 10px;*/
             background-color: #121212;
             color: #ffffff;
             border-radius: 0px;
@@ -19,13 +18,13 @@
             background: #1e1e1e;
             padding: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-            width: 620px; /* Increased by 10px */
-            margin: auto;
+            width: 620px; /* This width still centers the main container */
+            margin: auto; /* Keeps the main container centered */
+            position: relative; /* Added: Important for positioning child elements if needed, not directly for this fix */
         }
         .input-group {
             display: flex;
             align-items: center;
-/*            margin: 5px;*/
         }
         textarea, input {
             flex-grow: 1;
@@ -48,7 +47,6 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-/*            padding: 0 10px;*/
             box-sizing: border-box;
             text-align: center;
         }
@@ -79,54 +77,63 @@
 
         .output-wrapper {
             position: relative; /* Establishes context for absolute positioning */
-            width: 620px; /* Increased by 10px */
-            height: 110px; /* Increased by 10px for default height */
-            margin: 5px auto 10px auto;
+            width: 100%; /* Changed: Start at 100% of its parent's content area */
+            height: 110px; /* Initial height */
+            /* Removed `margin: auto` for width: It will now be left-aligned within .container if not explicitly set */
+            margin: 5px 0 10px 0; /* Changed: Added 0 for left/right margin */
             border: 1px solid #333;
             box-sizing: border-box;
             background-color: #333;
-            overflow: hidden; /* Contains children, especially if they resize */
+            resize: both; /* Make the wrapper itself resizable */
+            overflow: auto; /* Allow the wrapper to show scrollbars if its content grows */
+            min-width: 300px; /* Optional: minimum size for usability */
+            min-height: 80px; /* Optional: minimum size for usability */
+            max-width: none; /* Removed or set to none to allow full expansion */
+            max-height: 80vh; /* Optional: maximum size relative to viewport */
+            /* If you want it to initially be 620px wide but allow resizing: */
+            /* width: 620px; */ /* If uncommented, remove width:100% above */
+            /* To make it appear to expand from the center of the available space,
+               you might re-add margin: auto 0; for the vertical margin */
+            /* If you want it to always stay within the parent, set max-width: 100%;
+               but then it won't be able to expand beyond the 620px of the container */
         }
         /* Styles for the output textarea */
         .output-wrapper textarea#output {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100%; /* Fills the parent wrapper's current width */
+            height: 100%; /* Fills the parent wrapper's current height */
             margin: 0;
             padding: 0 10px;
             border: none;
             background-color: transparent;
             color: #ffffff;
             box-sizing: border-box;
-            resize: both; /* Allow both horizontal and vertical resizing */
-            overflow: auto; /* Ensure scrollbars appear if content overflows */
+            resize: none; /* Only the wrapper is resizable */
+            overflow: auto; /* Still needed for content within the textarea */
             display: block;
-            min-width: 100%; /* Prevent shrinking smaller than wrapper */
-            min-height: 100%; /* Prevent shrinking smaller than wrapper */
-            overflow: hidden;
+            min-width: 100%; /* Prevent shrinking smaller than wrapper's 100% */
+            min-height: 100%; /* Prevent shrinking smaller than wrapper's 100% */
         }
         /* Styles for the currentChecking element */
         .output-wrapper p#currentChecking {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100%; /* Fills the parent wrapper's current width */
+            height: 100%; /* Fills the parent wrapper's current height */
             margin: 0;
             padding: 10px;
             border: none;
             background-color: #333;
-/*            color: #ffffff;*/
             box-sizing: border-box;
             text-align: left;
             white-space: pre-wrap;
             overflow: auto; /* Ensure scrollbars appear if content overflows */
-            text-overflow: ellipsis; /* Still useful for single lines that hit max width before wrapping */
             display: none;
-            min-width: 100%; /* Prevent shrinking smaller than wrapper */
-            min-height: 100%; /* Prevent shrinking smaller than wrapper */
+            min-width: 100%;
+            min-height: 100%;
         }
     </style>
 </head>
@@ -191,17 +198,24 @@
             const otherTypes = ['file', 'url', 'text'].filter(t => t !== type);
             otherTypes.forEach(otherType => {
                 const checkButton = document.getElementById(`${otherType}CheckButton`);
-                const inputElement = document.getElementById(`${otherType}Input`) || document.getElementById(`${otherType}Input`);
                 if (checkButton) checkButton.disabled = checking;
-                if (inputElement) inputElement.disabled = checking;
+                
+                // Correctly identify input elements by type and disable them
                 if (otherType === 'file') {
                     const fileInput = document.getElementById('fileInput');
                     if (fileInput) fileInput.disabled = checking;
+                } else if (otherType === 'url') {
+                    const urlInput = document.getElementById('urlInput');
+                    if (urlInput) urlInput.disabled = checking;
+                } else if (otherType === 'text') {
+                    const textInput = document.getElementById('textInput');
+                    if (textInput) textInput.disabled = checking;
                 }
             });
-            if (type !== 'text') {
-                document.getElementById('textInput').disabled = checking;
-            }
+            // Ensure all input elements are disabled when a check is in progress
+            document.getElementById('fileInput').disabled = checking;
+            document.getElementById('urlInput').disabled = checking;
+            document.getElementById('textInput').disabled = checking;
         }
 
         function resetOutput() {
@@ -225,6 +239,8 @@
             message += `\n${currentItemUrl}`;
 
             currentCheckingElement.textContent = message;
+            // Optionally, scroll to bottom if the text overflows
+            currentCheckingElement.scrollTop = currentCheckingElement.scrollHeight;
         }
 
         async function checkSingleLink(item, type) {
@@ -336,15 +352,16 @@
             let validLinksContent = [];
             const finalOutputLines = new Set();
 
+            // Ensure #EXTM3U is at the very beginning
             validLinksContent.push("#EXTM3U");
             finalOutputLines.add("#EXTM3U");
 
             for (let i = 0; i < originalLines.length; i++) {
                 const line = originalLines[i].trim();
 
-                if (line.startsWith("#EXTM3U")) {
-                    if (i === 0) continue;
-                    else continue;
+                // Skip #EXTM3U if it's already added as the first line
+                if (line.startsWith("#EXTM3U") && i === 0) {
+                    continue;
                 }
 
                 if (line.startsWith('#EXTINF')) {
@@ -361,7 +378,7 @@
                                 validLinksContent.push(urlLine);
                                 finalOutputLines.add(urlLine);
                             }
-                            i = nextLineIndex;
+                            i = nextLineIndex; // Skip the URL line as it's already processed
                         }
                     }
                 } else if (line.startsWith('http')) {
@@ -373,7 +390,8 @@
                         }
                     }
                 } else {
-                    if (line.trim() !== '' && !finalOutputLines.has(line)) {
+                    // Include non-#EXTINF, non-HTTP lines that are not #EXTM3U
+                    if (line.trim() !== '' && !line.startsWith("#EXTM3U") && !finalOutputLines.has(line)) {
                         validLinksContent.push(line);
                         finalOutputLines.add(line);
                     }
@@ -455,7 +473,7 @@
                     document.getElementById('currentChecking').textContent = "Online M3U fetch cancelled.";
                 } else {
                     alert(`Error fetching online M3U file: ${error.message}`);
-                    document.getElementById('currentChecking').textContent = "Error fetching online M3U file.";
+                    document.getElementById('currentChecking').textContent = `Error fetching online M3U file: ${error.message}`;
                 }
                 toggleButtons('url', false);
                 resetOutput();
@@ -475,6 +493,7 @@
             if (type === 'url' && controllers['urlFetch']) {
                 controllers['urlFetch'].abort();
             }
+            // Abort all in-flight link checks
             for (const url in controllers) {
                 if (controllers.hasOwnProperty(url)) {
                     controllers[url].abort();
