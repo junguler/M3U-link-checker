@@ -127,11 +127,18 @@ button:hover {
   background-color: #333;
   box-sizing: border-box;
   text-align: left;
-  white-space: pre-wrap;
-  overflow: auto; /* Ensure scrollbars appear if content overflows */
+  white-space: normal;
+  overflow: hidden; /* No scrollbars; overly long lines are truncated instead (see .checking-line) */
   display: none;
   min-width: 100%;
   min-height: 100%;
+}
+/* Each line inside currentChecking (title / URL / etc.) truncates on its own instead of wrapping or scrolling */
+.output-wrapper p#currentChecking .checking-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* ---- Additive styles below: none of the rules above were changed ---- */
@@ -398,7 +405,7 @@ function resetOutput() {
   document.getElementById('output').value = '';
   document.getElementById('downloadButton').style.display = 'none';
   document.getElementById('downloadDeadButton').style.display = 'none';
-  document.getElementById('currentChecking').textContent = '';
+  setCurrentChecking('');
   document.getElementById('summaryLine').textContent = '';
   setDisplayStates(false);
   totalLinksToProcess = 0;
@@ -417,17 +424,29 @@ function describeReason(result) {
   return String(result.status);
 }
 
+// Renders text into #currentChecking as one truncating line per '\n'-separated line,
+// so long titles/URLs get an ellipsis instead of a scrollbar.
+function setCurrentChecking(message) {
+  const el = document.getElementById('currentChecking');
+  el.textContent = '';
+  String(message).split('\n').forEach(line => {
+    const lineEl = document.createElement('div');
+    lineEl.className = 'checking-line';
+    lineEl.textContent = line;
+    lineEl.title = line; // full text available on hover
+    el.appendChild(lineEl);
+  });
+}
+
 function updateCheckingStatus(currentItemTitle, currentItemUrl, validCount, deadCount) {
   linksProcessedCount++;
-  const currentCheckingElement = document.getElementById('currentChecking');
   let message = `Checking link ${linksProcessedCount} of ${totalLinksToProcess}:`;
   if (currentItemTitle && currentItemTitle.trim() !== '') {
     const match = currentItemTitle.match(/,(.*?)$/);
     message += `\n${match ? match[1].trim() : currentItemTitle.replace(/^#EXTINF.*?,/, '').trim()}`;
   }
   message += `\n${currentItemUrl}`;
-  currentCheckingElement.textContent = message;
-  currentCheckingElement.scrollTop = currentCheckingElement.scrollHeight;
+  setCurrentChecking(message);
 
   document.getElementById('summaryLine').textContent =
     `Checked ${linksProcessedCount}/${totalLinksToProcess} — ${validCount} valid, ${deadCount} dead so far`;
@@ -520,7 +539,7 @@ async function processLinks(m3uContent, type, originalFileName = 'checked_playli
   isCancelled[type] = false;
   isPaused[type] = false;
   const settings = getSettings();
-  document.getElementById('currentChecking').textContent = 'Starting link check...';
+  setCurrentChecking('Starting link check...');
 
   const originalLines = m3uContent.split('\n');
   const linksToProcess = [];
@@ -548,7 +567,7 @@ async function processLinks(m3uContent, type, originalFileName = 'checked_playli
   linksProcessedCount = 0;
 
   if (totalLinksToProcess === 0) {
-    document.getElementById('currentChecking').textContent = "No stream links found in the M3U content.";
+    setCurrentChecking("No stream links found in the M3U content.");
     let outputContent = originalLines.filter(line => line.trim() !== '').join('\n');
     if (outputContent.trim() === '' || !outputContent.trim().startsWith("#EXTM3U")) {
       outputContent = "#EXTM3U\n" + outputContent;
@@ -646,9 +665,9 @@ async function processLinks(m3uContent, type, originalFileName = 'checked_playli
   toggleButtons(type, false);
 
   const validStreamCount = validLinksContent.filter(l => l.startsWith('http')).length;
-  document.getElementById('currentChecking').textContent = isCancelled[type]
+  setCurrentChecking(isCancelled[type]
     ? "Check cancelled. Showing partial results."
-    : `Check complete. Found ${validStreamCount} valid streams out of ${totalLinksToProcess}.`;
+    : `Check complete. Found ${validStreamCount} valid streams out of ${totalLinksToProcess}.`);
   document.getElementById('summaryLine').textContent =
     `Done: ${validStreamCount} valid, ${deadLinks.length} dead, ${totalLinksToProcess} total.`;
 
@@ -725,7 +744,7 @@ async function processOnlineM3U() {
   try {
     const controller = new AbortController();
     controllers['urlFetch'] = controller;
-    document.getElementById('currentChecking').textContent = "Fetching online M3U file...";
+    setCurrentChecking("Fetching online M3U file...");
     setDisplayStates(true);
 
     const response = await fetch(urlInput, { signal: controller.signal });
@@ -734,10 +753,10 @@ async function processOnlineM3U() {
     await processLinks(text, 'url', urlInput);
   } catch (error) {
     if (error.name === 'AbortError') {
-      document.getElementById('currentChecking').textContent = "Online M3U fetch cancelled.";
+      setCurrentChecking("Online M3U fetch cancelled.");
     } else {
       alert(`Error fetching online M3U file: ${error.message}`);
-      document.getElementById('currentChecking').textContent = `Error fetching online M3U file: ${error.message}`;
+      setCurrentChecking(`Error fetching online M3U file: ${error.message}`);
     }
     toggleButtons('url', false);
     resetOutput();
