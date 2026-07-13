@@ -1,507 +1,783 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>M3U Link Checker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #121212;
-            color: #ffffff;
-            border-radius: 0px;
-        }
-        h1 {
-            color: #ffffff;
-            margin-bottom: 10px;
-        }
-        .container {
-            background: #1e1e1e;
-            padding: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-            width: 620px; /* This width still centers the main container */
-            margin: auto; /* Keeps the main container centered */
-            position: relative; /* Added: Important for positioning child elements if needed, not directly for this fix */
-        }
-        .input-group {
-            display: flex;
-            align-items: center;
-        }
-        textarea, input {
-            flex-grow: 1;
-            margin: 5px 0;
-            padding: 10px;
-            border: 1px solid #333;
-            background-color: #333;
-            color: #ffffff;
-            box-sizing: border-box;
-        }
-        button {
-            width: 120px;
-            margin-left: 10px;
-            border: 1px solid #888;
-            background-color: #888;
-            color: white;
-            cursor: pointer;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            box-sizing: border-box;
-            text-align: center;
-        }
-        button:hover {
-            background-color: #aaa;
-        }
-        .cancel-button {
-            display: none;
-            background-color: #d9534f;
-        }
-        .cancel-button:hover {
-            background-color: #c9302c;
-        }
+<title>M3U Link Checker</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background-color: #121212;
+  color: #ffffff;
+  border-radius: 0px;
+}
+h1 {
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+.container {
+  background: #1e1e1e;
+  padding: 10px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+  width: 620px; /* This width still centers the main container */
+  margin: auto; /* Keeps the main container centered */
+  position: relative; /* Added: Important for positioning child elements if needed, not directly for this fix */
+}
+.input-group {
+  display: flex;
+  align-items: center;
+}
+textarea, input {
+  flex-grow: 1;
+  margin: 5px 0;
+  padding: 10px;
+  border: 1px solid #333;
+  background-color: #333;
+  color: #ffffff;
+  box-sizing: border-box;
+}
+button {
+  width: 120px;
+  margin-left: 10px;
+  border: 1px solid #888;
+  background-color: #888;
+  color: white;
+  cursor: pointer;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  text-align: center;
+}
+button:hover {
+  background-color: #aaa;
+}
+.cancel-button {
+  display: none;
+  background-color: #d9534f;
+}
+.cancel-button:hover {
+  background-color: #c9302c;
+}
+/* Styling for the Download button */
+#downloadButton {
+  display: none; /* Hidden by default */
+  width: 200px;
+  margin: 10px auto; /* Center button with auto margins */
+  height: 40px;
+  color: white;
+  background-color: #4CAF50; /* Green color */
+  border: 1px solid #4CAF50;
+}
+#downloadButton:hover {
+  background-color: #45a049;
+}
+.output-wrapper {
+  position: relative; /* Establishes context for absolute positioning */
+  width: 100%; /* Changed: Start at 100% of its parent's content area */
+  height: 110px; /* Initial height */
+  /* Removed `margin: auto` for width: It will now be left-aligned within .container if not explicitly set */
+  margin: 5px 0 10px 0; /* Changed: Added 0 for left/right margin */
+  border: 1px solid #333;
+  box-sizing: border-box;
+  background-color: #333;
+  resize: both; /* Make the wrapper itself resizable */
+  overflow: auto; /* Allow the wrapper to show scrollbars if its content grows */
+  min-width: 300px; /* Optional: minimum size for usability */
+  min-height: 80px; /* Optional: minimum size for usability */
+  max-width: none; /* Removed or set to none to allow full expansion */
+  max-height: 80vh; /* Optional: maximum size relative to viewport */
+  /* If you want it to initially be 620px wide but allow resizing: */
+  /* width: 620px; */ /* If uncommented, remove width:100% above */
+  /* To make it appear to expand from the center of the available space,
+     you might re-add margin: auto 0; for the vertical margin */
+  /* If you want it to always stay within the parent, set max-width: 100%;
+     but then it won't be able to expand beyond the 620px of the container */
+}
+/* Styles for the output textarea */
+.output-wrapper textarea#output {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%; /* Fills the parent wrapper's current width */
+  height: 100%; /* Fills the parent wrapper's current height */
+  margin: 0;
+  padding: 0 10px;
+  border: none;
+  background-color: transparent;
+  color: #ffffff;
+  box-sizing: border-box;
+  resize: none; /* Only the wrapper is resizable */
+  overflow: auto; /* Still needed for content within the textarea */
+  display: block;
+  min-width: 100%; /* Prevent shrinking smaller than wrapper's 100% */
+  min-height: 100%; /* Prevent shrinking smaller than wrapper's 100% */
+}
+/* Styles for the currentChecking element */
+.output-wrapper p#currentChecking {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%; /* Fills the parent wrapper's current width */
+  height: 100%; /* Fills the parent wrapper's current height */
+  margin: 0;
+  padding: 10px;
+  border: none;
+  background-color: #333;
+  box-sizing: border-box;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow: auto; /* Ensure scrollbars appear if content overflows */
+  display: none;
+  min-width: 100%;
+  min-height: 100%;
+}
 
-        /* Styling for the Download button */
-        #downloadButton {
-            display: none; /* Hidden by default */
-            width: 200px;
-            margin: 10px auto; /* Center button with auto margins */
-            height: 40px;
-            color: white;
-            background-color: #4CAF50; /* Green color */
-            border: 1px solid #4CAF50;
-        }
-        #downloadButton:hover {
-            background-color: #45a049;
-        }
+/* ---- Additive styles below: none of the rules above were changed ---- */
 
-        .output-wrapper {
-            position: relative; /* Establishes context for absolute positioning */
-            width: 100%; /* Changed: Start at 100% of its parent's content area */
-            height: 110px; /* Initial height */
-            /* Removed `margin: auto` for width: It will now be left-aligned within .container if not explicitly set */
-            margin: 5px 0 10px 0; /* Changed: Added 0 for left/right margin */
-            border: 1px solid #333;
-            box-sizing: border-box;
-            background-color: #333;
-            resize: both; /* Make the wrapper itself resizable */
-            overflow: auto; /* Allow the wrapper to show scrollbars if its content grows */
-            min-width: 300px; /* Optional: minimum size for usability */
-            min-height: 80px; /* Optional: minimum size for usability */
-            max-width: none; /* Removed or set to none to allow full expansion */
-            max-height: 80vh; /* Optional: maximum size relative to viewport */
-            /* If you want it to initially be 620px wide but allow resizing: */
-            /* width: 620px; */ /* If uncommented, remove width:100% above */
-            /* To make it appear to expand from the center of the available space,
-               you might re-add margin: auto 0; for the vertical margin */
-            /* If you want it to always stay within the parent, set max-width: 100%;
-               but then it won't be able to expand beyond the 620px of the container */
-        }
-        /* Styles for the output textarea */
-        .output-wrapper textarea#output {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%; /* Fills the parent wrapper's current width */
-            height: 100%; /* Fills the parent wrapper's current height */
-            margin: 0;
-            padding: 0 10px;
-            border: none;
-            background-color: transparent;
-            color: #ffffff;
-            box-sizing: border-box;
-            resize: none; /* Only the wrapper is resizable */
-            overflow: auto; /* Still needed for content within the textarea */
-            display: block;
-            min-width: 100%; /* Prevent shrinking smaller than wrapper's 100% */
-            min-height: 100%; /* Prevent shrinking smaller than wrapper's 100% */
-        }
-        /* Styles for the currentChecking element */
-        .output-wrapper p#currentChecking {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%; /* Fills the parent wrapper's current width */
-            height: 100%; /* Fills the parent wrapper's current height */
-            margin: 0;
-            padding: 10px;
-            border: none;
-            background-color: #333;
-            box-sizing: border-box;
-            text-align: left;
-            white-space: pre-wrap;
-            overflow: auto; /* Ensure scrollbars appear if content overflows */
-            display: none;
-            min-width: 100%;
-            min-height: 100%;
-        }
-    </style>
+/* Advanced settings panel: collapsed by default, so the resting page looks identical to before.
+   Styled to match the rest of the page: same dark box / border / white text as everything else. */
+.advanced-settings {
+  text-align: left;
+  margin: 5px 0 10px 0;
+  border: 1px solid #333;
+  background-color: #333;
+  padding: 0;
+  box-sizing: border-box;
+}
+.advanced-settings summary {
+  cursor: pointer;
+  padding: 10px;
+  color: #ffffff;
+  font-size: 1em;
+  user-select: none;
+}
+.advanced-settings summary:hover {
+  background-color: #3d3d3d;
+}
+.advanced-settings .settings-grid {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding: 10px;
+  border-top: 1px solid #444;
+  background-color: #1e1e1e;
+}
+.settings-column {
+  display: flex;
+}
+.numeric-column {
+  gap: 10px;
+}
+.checkbox-column {
+  flex-direction: column;
+  gap: 8px;
+}
+.advanced-settings .setting-item {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9em;
+  color: #ffffff;
+}
+.advanced-settings .setting-item.checkbox-item {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.advanced-settings input[type="number"] {
+  width: 80px;
+  flex-grow: 0;
+  margin: 3px 0 0 0;
+  padding: 6px;
+}
+.advanced-settings input[type="checkbox"] {
+  flex-grow: 0;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  accent-color: #888;
+}
+
+/* Second (dead links) download button - stacked under the main download button, at half its size */
+.download-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+#downloadDeadButton {
+  display: none; /* Hidden by default, same as #downloadButton */
+  width: 100px;
+  margin: 0 auto;
+  height: auto;
+  min-height: 20px;
+  padding: 4px 2px;
+  line-height: 1.15;
+  font-size: 0.7em;
+  color: white;
+  background-color: #a35c00;
+  border: 1px solid #a35c00;
+}
+#downloadDeadButton:hover {
+  background-color: #c26e00;
+}
+
+/* Pause/Resume button reuses the same visual language as Cancel, only ever shown while a check is running */
+.pause-button {
+  display: none;
+  background-color: #5b7a99;
+}
+.pause-button:hover {
+  background-color: #6f93b8;
+}
+
+/* Live summary line under the output box */
+#summaryLine {
+  text-align: left;
+  font-size: 0.85em;
+  color: #bbbbbb;
+  margin: 5px 0 10px 0;
+  min-height: 1em;
+}
+
+/* Mobile fix: only kicks in on narrow screens, desktop width is untouched */
+@media (max-width: 660px) {
+  .container {
+    width: 95%;
+  }
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>M3U Link Checker</h1>
-        <div class="input-group">
-            <input type="file" id="fileInput" accept=".m3u,.m3u8">
-            <button id="fileCheckButton" onclick="processM3U()">Check local file</button>
-            <button id="fileCancelButton" class="cancel-button" onclick="cancelProcess('file')">Cancel</button>
-        </div>
-        <div class="input-group">
-            <input type="text" id="urlInput" placeholder="Enter online M3U URL...">
-            <button id="urlCheckButton" onclick="processOnlineM3U()">Check Online Link</button>
-            <button id="urlCancelButton" class="cancel-button" onclick="cancelProcess('url')">Cancel</button>
-        </div>
-        <div class="input-group">
-            <textarea id="textInput" rows="3" placeholder="Paste M3U content here..."></textarea>
-            <button id="textCheckButton" onclick="processTextM3U()">Check Pasted streams</button>
-            <button id="textCancelButton" class="cancel-button" onclick="cancelProcess('text')">Cancel</button>
-        </div>
-        <div class="output-wrapper">
-            <textarea id="output" rows="10" readonly></textarea>
-            <p id="currentChecking"></p>
-        </div>
-        <button id="downloadButton" onclick="document.getElementById('downloadLink').click();">Download Checked Playlist</button>
-        <a id="downloadLink" style="display:none"></a>
-    </div>
+<div class="container">
+<h1>M3U Link Checker</h1>
 
-    <script>
-        let controllers = {};
-        let isCancelled = {};
-        let totalLinksToProcess = 0;
-        let linksProcessedCount = 0;
-        const concurrencyLimit = 10;
-        const linkTimeout = 3000;
+<div class="input-group">
+<input type="file" id="fileInput" accept=".m3u,.m3u8">
+<button id="fileCheckButton" onclick="processM3U()">Check local file</button>
+<button id="filePauseButton" class="pause-button" onclick="togglePause('file')">Pause</button>
+<button id="fileCancelButton" class="cancel-button" onclick="cancelProcess('file')">Cancel</button>
+</div>
 
-        const tempValidLinks = new Map();
+<div class="input-group">
+<input type="text" id="urlInput" placeholder="Enter online M3U URL...">
+<button id="urlCheckButton" onclick="processOnlineM3U()">Check Online Link</button>
+<button id="urlPauseButton" class="pause-button" onclick="togglePause('url')">Pause</button>
+<button id="urlCancelButton" class="cancel-button" onclick="cancelProcess('url')">Cancel</button>
+</div>
 
-        function setDisplayStates(checkingInProgress) {
-            const outputElement = document.getElementById('output');
-            const currentCheckingElement = document.getElementById('currentChecking');
-            const downloadButton = document.getElementById('downloadButton');
+<div class="input-group">
+<textarea id="textInput" rows="3" placeholder="Paste M3U content here..."></textarea>
+<button id="textCheckButton" onclick="processTextM3U()">Check Pasted streams</button>
+<button id="textPauseButton" class="pause-button" onclick="togglePause('text')">Pause</button>
+<button id="textCancelButton" class="cancel-button" onclick="cancelProcess('text')">Cancel</button>
+</div>
 
-            if (checkingInProgress) {
-                outputElement.style.display = 'none';
-                currentCheckingElement.style.display = 'block';
-                downloadButton.style.display = 'none';
-            } else {
-                outputElement.style.display = 'block';
-                currentCheckingElement.style.display = 'none';
-                // Download button visibility handled by processLinks completion logic
-            }
+<!-- Additive: advanced settings, collapsed by default so the page looks exactly as before until opened -->
+<details class="advanced-settings">
+<summary>Advanced settings (concurrency, timeout, retries)</summary>
+<div class="settings-grid">
+<div class="settings-column numeric-column">
+<div class="setting-item">
+<label for="concurrencyInput">Concurrency</label>
+<input type="number" id="concurrencyInput" min="1" max="50" value="10">
+</div>
+<div class="setting-item">
+<label for="timeoutInput">Timeout (ms)</label>
+<input type="number" id="timeoutInput" min="1000" max="30000" step="500" value="6000">
+</div>
+</div>
+<div class="settings-column checkbox-column">
+<div class="setting-item checkbox-item">
+<input type="checkbox" id="retryCheckbox" checked>
+<label for="retryCheckbox">Retry a failed link once</label>
+</div>
+<div class="setting-item checkbox-item">
+<input type="checkbox" id="corsFallbackCheckbox" checked>
+<label for="corsFallbackCheckbox">Assume CORS-blocked streams are reachable</label>
+</div>
+<div class="setting-item checkbox-item">
+<input type="checkbox" id="dedupeCheckbox" checked>
+<label for="dedupeCheckbox">Skip re-checking duplicate URLs</label>
+</div>
+</div>
+</div>
+</details>
+
+<div class="output-wrapper">
+<textarea id="output" rows="10" readonly></textarea>
+<p id="currentChecking"></p>
+</div>
+
+<p id="summaryLine"></p>
+
+<div class="download-row">
+<button id="downloadButton" onclick="document.getElementById('downloadLink').click();">Download Checked Playlist</button>
+<button id="downloadDeadButton" onclick="document.getElementById('downloadDeadLink').click();">Download Dead Links Report</button>
+</div>
+<a id="downloadLink" style="display:none"></a>
+<a id="downloadDeadLink" style="display:none"></a>
+
+</div>
+
+<script>
+let controllers = {};
+let isCancelled = {};
+let isPaused = {};
+let totalLinksToProcess = 0;
+let linksProcessedCount = 0;
+const tempValidLinks = new Map();
+// url -> { ok, status, reason } — shared across duplicate URLs so we only ever check a unique URL once
+const urlResultCache = new Map();
+
+function getSettings() {
+  const concurrency = Math.max(1, parseInt(document.getElementById('concurrencyInput').value, 10) || 10);
+  const timeout = Math.max(1000, parseInt(document.getElementById('timeoutInput').value, 10) || 6000);
+  const retry = document.getElementById('retryCheckbox').checked;
+  const corsFallback = document.getElementById('corsFallbackCheckbox').checked;
+  const dedupe = document.getElementById('dedupeCheckbox').checked;
+  return { concurrency, timeout, retry, corsFallback, dedupe };
+}
+
+function setDisplayStates(checkingInProgress) {
+  const outputElement = document.getElementById('output');
+  const currentCheckingElement = document.getElementById('currentChecking');
+  const downloadButton = document.getElementById('downloadButton');
+  if (checkingInProgress) {
+    outputElement.style.display = 'none';
+    currentCheckingElement.style.display = 'block';
+    downloadButton.style.display = 'none';
+  } else {
+    outputElement.style.display = 'block';
+    currentCheckingElement.style.display = 'none';
+    // Download button visibility handled by processLinks completion logic
+  }
+}
+
+function toggleButtons(type, checking) {
+  document.getElementById(`${type}CheckButton`).style.display = checking ? 'none' : 'flex';
+  document.getElementById(`${type}CancelButton`).style.display = checking ? 'flex' : 'none';
+  const pauseButton = document.getElementById(`${type}PauseButton`);
+  if (pauseButton) {
+    pauseButton.style.display = checking ? 'flex' : 'none';
+    if (checking) pauseButton.textContent = 'Pause';
+  }
+  setDisplayStates(checking);
+
+  const otherTypes = ['file', 'url', 'text'].filter(t => t !== type);
+  otherTypes.forEach(otherType => {
+    const checkButton = document.getElementById(`${otherType}CheckButton`);
+    if (checkButton) checkButton.disabled = checking;
+
+    if (otherType === 'file') {
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput) fileInput.disabled = checking;
+    } else if (otherType === 'url') {
+      const urlInput = document.getElementById('urlInput');
+      if (urlInput) urlInput.disabled = checking;
+    } else if (otherType === 'text') {
+      const textInput = document.getElementById('textInput');
+      if (textInput) textInput.disabled = checking;
+    }
+  });
+
+  document.getElementById('fileInput').disabled = checking;
+  document.getElementById('urlInput').disabled = checking;
+  document.getElementById('textInput').disabled = checking;
+
+  // Advanced settings shouldn't change while a check is running
+  document.getElementById('concurrencyInput').disabled = checking;
+  document.getElementById('timeoutInput').disabled = checking;
+  document.getElementById('retryCheckbox').disabled = checking;
+  document.getElementById('corsFallbackCheckbox').disabled = checking;
+  document.getElementById('dedupeCheckbox').disabled = checking;
+}
+
+function resetOutput() {
+  document.getElementById('output').value = '';
+  document.getElementById('downloadButton').style.display = 'none';
+  document.getElementById('downloadDeadButton').style.display = 'none';
+  document.getElementById('currentChecking').textContent = '';
+  document.getElementById('summaryLine').textContent = '';
+  setDisplayStates(false);
+  totalLinksToProcess = 0;
+  linksProcessedCount = 0;
+  tempValidLinks.clear();
+  urlResultCache.clear();
+}
+
+function describeReason(result) {
+  if (!result) return 'unknown';
+  if (result.status === 'timeout') return 'timed out';
+  if (result.status === 'network-error') return 'network error / dead';
+  if (result.status === 'cancelled') return 'cancelled';
+  if (result.status === 'reachable-cors-blocked') return 'reachable (CORS-blocked, assumed OK)';
+  if (typeof result.status === 'number') return `HTTP ${result.status}`;
+  return String(result.status);
+}
+
+function updateCheckingStatus(currentItemTitle, currentItemUrl, validCount, deadCount) {
+  linksProcessedCount++;
+  const currentCheckingElement = document.getElementById('currentChecking');
+  let message = `Checking link ${linksProcessedCount} of ${totalLinksToProcess}:`;
+  if (currentItemTitle && currentItemTitle.trim() !== '') {
+    const match = currentItemTitle.match(/,(.*?)$/);
+    message += `\n${match ? match[1].trim() : currentItemTitle.replace(/^#EXTINF.*?,/, '').trim()}`;
+  }
+  message += `\n${currentItemUrl}`;
+  currentCheckingElement.textContent = message;
+  currentCheckingElement.scrollTop = currentCheckingElement.scrollHeight;
+
+  document.getElementById('summaryLine').textContent =
+    `Checked ${linksProcessedCount}/${totalLinksToProcess} — ${validCount} valid, ${deadCount} dead so far`;
+}
+
+// Performs one raw network attempt: HEAD, or GET with a small Range, optionally in no-cors (opaque) mode.
+async function attempt(url, method, useRange, opaque, timeoutMs) {
+  const controller = new AbortController();
+  controllers[url] = controller;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const options = { method, signal: controller.signal };
+    if (opaque) options.mode = 'no-cors';
+    if (useRange) options.headers = { 'Range': 'bytes=0-1' };
+    const response = await fetch(url, options);
+    clearTimeout(timeoutId);
+    if (opaque) {
+      // opaque responses can't be inspected, but a resolved fetch (no throw) means the server was reachable
+      return { ok: true, status: 'reachable-cors-blocked' };
+    }
+    const ok = response.status === 200 || response.status === 206 || (response.status >= 300 && response.status < 400);
+    return { ok, status: response.status };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      return { ok: false, status: 'timeout' };
+    }
+    return { ok: false, status: 'network-error' };
+  } finally {
+    delete controllers[url];
+  }
+}
+
+// Full check for a single URL: HEAD -> GET+Range fallback -> optional CORS-opaque fallback -> optional retry.
+async function checkUrl(url, type, settings) {
+  if (isCancelled[type]) return { ok: false, status: 'cancelled' };
+
+  let result = await attempt(url, 'HEAD', false, false, settings.timeout);
+
+  if (!result.ok && result.status !== 'timeout' && !isCancelled[type]) {
+    result = await attempt(url, 'GET', true, false, settings.timeout);
+  }
+
+  if (!result.ok && settings.corsFallback && !isCancelled[type]) {
+    const opaqueResult = await attempt(url, 'GET', true, true, settings.timeout);
+    if (opaqueResult.ok) {
+      result = opaqueResult;
+    }
+  }
+
+  if (!result.ok && settings.retry && !isCancelled[type]) {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    result = await attempt(url, 'HEAD', false, false, settings.timeout);
+    if (!result.ok && settings.corsFallback && !isCancelled[type]) {
+      const opaqueRetry = await attempt(url, 'GET', true, true, settings.timeout);
+      if (opaqueRetry.ok) result = opaqueRetry;
+    }
+  }
+
+  return result;
+}
+
+async function checkSingleLink(item, type, settings) {
+  if (isCancelled[type]) {
+    return { url: item.url, status: 'cancelled' };
+  }
+
+  // Pause: hold off starting new checks while paused, without touching in-flight ones
+  while (isPaused[type] && !isCancelled[type]) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+  if (isCancelled[type]) {
+    return { url: item.url, status: 'cancelled' };
+  }
+
+  let result;
+  if (settings.dedupe && urlResultCache.has(item.url)) {
+    result = urlResultCache.get(item.url);
+  } else {
+    result = await checkUrl(item.url, type, settings);
+    if (settings.dedupe) urlResultCache.set(item.url, result);
+  }
+
+  return { url: item.url, ...result };
+}
+
+async function processLinks(m3uContent, type, originalFileName = 'checked_playlist.m3u') {
+  resetOutput();
+  toggleButtons(type, true);
+  isCancelled[type] = false;
+  isPaused[type] = false;
+  const settings = getSettings();
+  document.getElementById('currentChecking').textContent = 'Starting link check...';
+
+  const originalLines = m3uContent.split('\n');
+  const linksToProcess = [];
+  let currentTitle = '';
+  let currentTitleLineIndex = -1;
+
+  for (let i = 0; i < originalLines.length; i++) {
+    const line = originalLines[i].trim();
+    if (line.startsWith('#EXTINF')) {
+      currentTitle = line;
+      currentTitleLineIndex = i;
+    } else if (line.startsWith("http")) {
+      linksToProcess.push({
+        title: currentTitle,
+        url: line,
+        originalIndex: i,
+        originalTitleLineIndex: currentTitleLineIndex
+      });
+      currentTitle = '';
+      currentTitleLineIndex = -1;
+    }
+  }
+
+  totalLinksToProcess = linksToProcess.length;
+  linksProcessedCount = 0;
+
+  if (totalLinksToProcess === 0) {
+    document.getElementById('currentChecking').textContent = "No stream links found in the M3U content.";
+    let outputContent = originalLines.filter(line => line.trim() !== '').join('\n');
+    if (outputContent.trim() === '' || !outputContent.trim().startsWith("#EXTM3U")) {
+      outputContent = "#EXTM3U\n" + outputContent;
+    }
+    document.getElementById('output').value = outputContent;
+    toggleButtons(type, false);
+    return;
+  }
+
+  const deadLinks = [];
+  let validCount = 0;
+  let deadCount = 0;
+
+  const activePromises = new Set();
+  for (let i = 0; i < linksToProcess.length; i++) {
+    if (isCancelled[type]) break;
+    const item = linksToProcess[i];
+    const promise = checkSingleLink(item, type, settings).then(result => {
+      if (isCancelled[type]) {
+        // still keep whatever was already recorded
+      } else if (result && result.ok) {
+        validCount++;
+        tempValidLinks.set(item.originalIndex, {
+          titleLine: item.title,
+          urlLine: item.url
+        });
+      } else {
+        deadCount++;
+        deadLinks.push({
+          title: item.title ? item.title.replace(/^#EXTINF.*?,/, '').trim() : '',
+          url: item.url,
+          reason: describeReason(result)
+        });
+      }
+      activePromises.delete(promise);
+      updateCheckingStatus(item.title, item.url, validCount, deadCount);
+      return result;
+    });
+    activePromises.add(promise);
+
+    if (activePromises.size >= settings.concurrency) {
+      await Promise.race(Array.from(activePromises));
+    }
+  }
+
+  await Promise.allSettled(Array.from(activePromises));
+
+  let validLinksContent = [];
+  const finalOutputLines = new Set();
+
+  validLinksContent.push("#EXTM3U");
+  finalOutputLines.add("#EXTM3U");
+
+  for (let i = 0; i < originalLines.length; i++) {
+    const line = originalLines[i].trim();
+
+    if (line.startsWith("#EXTM3U") && i === 0) {
+      continue;
+    }
+
+    if (line.startsWith('#EXTINF')) {
+      const nextLineIndex = i + 1;
+      if (nextLineIndex < originalLines.length) {
+        const nextLine = originalLines[nextLineIndex].trim();
+        if (nextLine.startsWith('http') && tempValidLinks.has(nextLineIndex)) {
+          const { titleLine, urlLine } = tempValidLinks.get(nextLineIndex);
+          if (!finalOutputLines.has(titleLine)) {
+            validLinksContent.push(titleLine);
+            finalOutputLines.add(titleLine);
+          }
+          if (!finalOutputLines.has(urlLine)) {
+            validLinksContent.push(urlLine);
+            finalOutputLines.add(urlLine);
+          }
+          i = nextLineIndex;
         }
-
-        function toggleButtons(type, checking) {
-            document.getElementById(`${type}CheckButton`).style.display = checking ? 'none' : 'flex';
-            document.getElementById(`${type}CancelButton`).style.display = checking ? 'flex' : 'none';
-
-            setDisplayStates(checking);
-
-            const otherTypes = ['file', 'url', 'text'].filter(t => t !== type);
-            otherTypes.forEach(otherType => {
-                const checkButton = document.getElementById(`${otherType}CheckButton`);
-                if (checkButton) checkButton.disabled = checking;
-                
-                // Correctly identify input elements by type and disable them
-                if (otherType === 'file') {
-                    const fileInput = document.getElementById('fileInput');
-                    if (fileInput) fileInput.disabled = checking;
-                } else if (otherType === 'url') {
-                    const urlInput = document.getElementById('urlInput');
-                    if (urlInput) urlInput.disabled = checking;
-                } else if (otherType === 'text') {
-                    const textInput = document.getElementById('textInput');
-                    if (textInput) textInput.disabled = checking;
-                }
-            });
-            // Ensure all input elements are disabled when a check is in progress
-            document.getElementById('fileInput').disabled = checking;
-            document.getElementById('urlInput').disabled = checking;
-            document.getElementById('textInput').disabled = checking;
+      }
+    } else if (line.startsWith('http')) {
+      if (tempValidLinks.has(i)) {
+        const { urlLine } = tempValidLinks.get(i);
+        if (!finalOutputLines.has(urlLine)) {
+          validLinksContent.push(urlLine);
+          finalOutputLines.add(urlLine);
         }
+      }
+    } else {
+      if (line.trim() !== '' && !line.startsWith("#EXTM3U") && !finalOutputLines.has(line)) {
+        validLinksContent.push(line);
+        finalOutputLines.add(line);
+      }
+    }
+  }
 
-        function resetOutput() {
-            document.getElementById('output').value = '';
-            document.getElementById('downloadButton').style.display = 'none';
-            document.getElementById('currentChecking').textContent = '';
-            setDisplayStates(false);
-            totalLinksToProcess = 0;
-            linksProcessedCount = 0;
-            tempValidLinks.clear();
-        }
+  document.getElementById('output').value = validLinksContent.join('\n');
+  toggleButtons(type, false);
 
-        function updateCheckingStatus(currentItemTitle, currentItemUrl) {
-            linksProcessedCount++;
-            const currentCheckingElement = document.getElementById('currentChecking');
-            let message = `Checking link ${linksProcessedCount} of ${totalLinksToProcess}:`;
-            if (currentItemTitle && currentItemTitle.trim() !== '') {
-                const match = currentItemTitle.match(/,(.*?)$/);
-                message += `\n${match ? match[1].trim() : currentItemTitle.replace(/^#EXTINF.*?,/, '').trim()}`;
-            }
-            message += `\n${currentItemUrl}`;
+  const validStreamCount = validLinksContent.filter(l => l.startsWith('http')).length;
+  document.getElementById('currentChecking').textContent = isCancelled[type]
+    ? "Check cancelled. Showing partial results."
+    : `Check complete. Found ${validStreamCount} valid streams out of ${totalLinksToProcess}.`;
+  document.getElementById('summaryLine').textContent =
+    `Done: ${validStreamCount} valid, ${deadLinks.length} dead, ${totalLinksToProcess} total.`;
 
-            currentCheckingElement.textContent = message;
-            // Optionally, scroll to bottom if the text overflows
-            currentCheckingElement.scrollTop = currentCheckingElement.scrollHeight;
-        }
+  if (validLinksContent.filter(l => l.startsWith('http')).length > 0) {
+    const blob = new Blob([validLinksContent.join('\n')], { type: 'audio/x-mpegurl' });
+    const url = URL.createObjectURL(blob);
+    const downloadLink = document.getElementById('downloadLink');
+    downloadLink.href = url;
+    downloadLink.download = getOutputFileName(type, originalFileName);
+    document.getElementById('downloadButton').style.display = 'block';
+  } else {
+    document.getElementById('downloadButton').style.display = 'none';
+  }
 
-        async function checkSingleLink(item, type) {
-            if (isCancelled[type]) {
-                return { url: item.url, status: 'cancelled' };
-            }
+  if (deadLinks.length > 0) {
+    const reportLines = deadLinks.map(d => {
+      const name = d.title ? d.title : '(no title)';
+      return `${name}\n${d.url}\nreason: ${d.reason}\n`;
+    });
+    const reportBlob = new Blob([reportLines.join('\n')], { type: 'text/plain' });
+    const reportUrl = URL.createObjectURL(reportBlob);
+    const deadLink = document.getElementById('downloadDeadLink');
+    deadLink.href = reportUrl;
+    deadLink.download = getOutputFileName(type, originalFileName).replace(/\.m3u8?$/, '') + '_dead_links.txt';
+    document.getElementById('downloadDeadButton').style.display = 'block';
+  } else {
+    document.getElementById('downloadDeadButton').style.display = 'none';
+  }
+}
 
-            const controller = new AbortController();
-            controllers[item.url] = controller;
+function getOutputFileName(type, originalName) {
+  let baseName = originalName;
+  if (type === 'file') {
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput.files.length > 0) {
+      baseName = fileInput.files[0].name;
+    }
+  } else if (type === 'url') {
+    const urlInput = document.getElementById('urlInput').value.trim();
+    try {
+      const url = new URL(urlInput);
+      const pathParts = url.pathname.split('/');
+      baseName = pathParts[pathParts.length - 1] || 'playlist.m3u';
+      baseName = baseName.split('?')[0];
+    } catch (e) {
+      baseName = 'playlist.m3u';
+    }
+  } else {
+    baseName = 'pasted_streams.m3u';
+  }
 
-            const timeoutPromise = new Promise((resolve) =>
-                setTimeout(() => {
-                    controller.abort();
-                    resolve({ url: item.url, status: 'timedout' });
-                }, linkTimeout)
-            );
+  if (!baseName.endsWith('.m3u') && !baseName.endsWith('.m3u8')) {
+    baseName += '.m3u';
+  }
 
-            const fetchPromise = fetch(item.url, { method: 'HEAD', signal: controller.signal })
-                .then(response => ({ url: item.url, status: response.status }))
-                .catch(error => {
-                    if (error.name === 'AbortError') {
-                        return { url: item.url, status: 'aborted' };
-                    }
-                    return { url: item.url, status: 'invalid' };
-                });
+  const lastDotIndex = baseName.lastIndexOf('.');
+  if (lastDotIndex !== -1) {
+    return `${baseName.substring(0, lastDotIndex)}_checked${baseName.substring(lastDotIndex)}`;
+  }
+  return `${baseName}_checked.m3u`;
+}
 
-            try {
-                const result = await Promise.race([fetchPromise, timeoutPromise]);
-                if (isCancelled[type]) return { url: item.url, status: 'cancelled' };
-                return result;
-            } finally {
-                delete controllers[item.url];
-                updateCheckingStatus(item.title, item.url);
-            }
-        }
+async function processM3U() {
+  const fileInput = document.getElementById('fileInput');
+  if (!fileInput.files.length) return alert('Please upload an M3U file.');
+  const fileName = fileInput.files[0].name;
+  const text = await fileInput.files[0].text();
+  await processLinks(text, 'file', fileName);
+}
 
-        async function processLinks(m3uContent, type, originalFileName = 'checked_playlist.m3u') {
-            resetOutput();
-            toggleButtons(type, true);
-            isCancelled[type] = false;
-            document.getElementById('currentChecking').textContent = 'Starting link check...';
+async function processOnlineM3U() {
+  const urlInput = document.getElementById('urlInput').value.trim();
+  if (!urlInput) return alert('Please enter an online M3U URL.');
+  try {
+    const controller = new AbortController();
+    controllers['urlFetch'] = controller;
+    document.getElementById('currentChecking').textContent = "Fetching online M3U file...";
+    setDisplayStates(true);
 
-            const originalLines = m3uContent.split('\n');
-            const linksToProcess = [];
+    const response = await fetch(urlInput, { signal: controller.signal });
+    if (!response.ok) throw new Error(`Failed to fetch M3U file: ${response.status} ${response.statusText}`);
+    const text = await response.text();
+    await processLinks(text, 'url', urlInput);
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      document.getElementById('currentChecking').textContent = "Online M3U fetch cancelled.";
+    } else {
+      alert(`Error fetching online M3U file: ${error.message}`);
+      document.getElementById('currentChecking').textContent = `Error fetching online M3U file: ${error.message}`;
+    }
+    toggleButtons('url', false);
+    resetOutput();
+  } finally {
+    delete controllers['urlFetch'];
+  }
+}
 
-            let currentTitle = '';
-            let currentTitleLineIndex = -1;
+async function processTextM3U() {
+  const textInput = document.getElementById('textInput').value;
+  if (!textInput.trim()) return alert('Please paste M3U content.');
+  await processLinks(textInput, 'text', 'pasted_streams.m3u');
+}
 
-            for (let i = 0; i < originalLines.length; i++) {
-                const line = originalLines[i].trim();
+function togglePause(type) {
+  isPaused[type] = !isPaused[type];
+  const pauseButton = document.getElementById(`${type}PauseButton`);
+  if (pauseButton) {
+    pauseButton.textContent = isPaused[type] ? 'Resume' : 'Pause';
+  }
+  const summaryLine = document.getElementById('summaryLine');
+  if (isPaused[type]) {
+    summaryLine.textContent = 'Paused — click Resume to continue. ' + summaryLine.textContent;
+  } else {
+    summaryLine.textContent = summaryLine.textContent.replace(/^Paused — click Resume to continue\.\s*/, '');
+  }
+}
 
-                if (line.startsWith('#EXTINF')) {
-                    currentTitle = line;
-                    currentTitleLineIndex = i;
-                } else if (line.startsWith("http")) {
-                    linksToProcess.push({
-                        title: currentTitle,
-                        url: line,
-                        originalIndex: i,
-                        originalTitleLineIndex: currentTitleLineIndex
-                    });
-                    currentTitle = '';
-                    currentTitleLineIndex = -1;
-                }
-            }
-
-            totalLinksToProcess = linksToProcess.length;
-            linksProcessedCount = 0;
-
-            if (totalLinksToProcess === 0) {
-                document.getElementById('currentChecking').textContent = "No stream links found in the M3U content.";
-                let outputContent = originalLines.filter(line => line.trim() !== '').join('\n');
-                if (outputContent.trim() === '' || !outputContent.trim().startsWith("#EXTM3U")) {
-                    outputContent = "#EXTM3U\n" + outputContent;
-                }
-                document.getElementById('output').value = outputContent;
-                toggleButtons(type, false);
-                return;
-            }
-
-            const activePromises = new Set();
-
-            for (let i = 0; i < linksToProcess.length; i++) {
-                if (isCancelled[type]) break;
-
-                const item = linksToProcess[i];
-                const promise = checkSingleLink(item, type).then(result => {
-                    if (isCancelled[type]) {
-                         // Even if cancelled, we still want to record previous valid items
-                    } else if (result && (result.status === 200 || (result.status >= 300 && result.status < 400))) {
-                        tempValidLinks.set(item.originalIndex, {
-                            titleLine: item.title,
-                            urlLine: item.url
-                        });
-                    }
-                    activePromises.delete(promise);
-                    return result;
-                });
-
-                activePromises.add(promise);
-
-                if (activePromises.size >= concurrencyLimit) {
-                    await Promise.race(Array.from(activePromises));
-                }
-            }
-
-            await Promise.allSettled(Array.from(activePromises));
-
-            let validLinksContent = [];
-            const finalOutputLines = new Set();
-
-            // Ensure #EXTM3U is at the very beginning
-            validLinksContent.push("#EXTM3U");
-            finalOutputLines.add("#EXTM3U");
-
-            for (let i = 0; i < originalLines.length; i++) {
-                const line = originalLines[i].trim();
-
-                // Skip #EXTM3U if it's already added as the first line
-                if (line.startsWith("#EXTM3U") && i === 0) {
-                    continue;
-                }
-
-                if (line.startsWith('#EXTINF')) {
-                    const nextLineIndex = i + 1;
-                    if (nextLineIndex < originalLines.length) {
-                        const nextLine = originalLines[nextLineIndex].trim();
-                        if (nextLine.startsWith('http') && tempValidLinks.has(nextLineIndex)) {
-                            const { titleLine, urlLine } = tempValidLinks.get(nextLineIndex);
-                            if (!finalOutputLines.has(titleLine)) {
-                                validLinksContent.push(titleLine);
-                                finalOutputLines.add(titleLine);
-                            }
-                            if (!finalOutputLines.has(urlLine)) {
-                                validLinksContent.push(urlLine);
-                                finalOutputLines.add(urlLine);
-                            }
-                            i = nextLineIndex; // Skip the URL line as it's already processed
-                        }
-                    }
-                } else if (line.startsWith('http')) {
-                    if (tempValidLinks.has(i)) {
-                         const { urlLine } = tempValidLinks.get(i);
-                         if (!finalOutputLines.has(urlLine)) {
-                            validLinksContent.push(urlLine);
-                            finalOutputLines.add(urlLine);
-                        }
-                    }
-                } else {
-                    // Include non-#EXTINF, non-HTTP lines that are not #EXTM3U
-                    if (line.trim() !== '' && !line.startsWith("#EXTM3U") && !finalOutputLines.has(line)) {
-                        validLinksContent.push(line);
-                        finalOutputLines.add(line);
-                    }
-                }
-            }
-
-            document.getElementById('output').value = validLinksContent.join('\n');
-            toggleButtons(type, false);
-            const validStreamCount = validLinksContent.filter(l => l.startsWith('http')).length;
-            document.getElementById('currentChecking').textContent = isCancelled[type] ? "Check cancelled. Showing partial results." : `Check complete. Found ${validStreamCount} valid streams out of ${totalLinksToProcess}.`;
-
-            if (validLinksContent.filter(l => l.startsWith('http')).length > 0) {
-                const blob = new Blob([validLinksContent.join('\n')], { type: 'audio/x-mpegurl' });
-                const url = URL.createObjectURL(blob);
-                const downloadLink = document.getElementById('downloadLink');
-                downloadLink.href = url;
-                downloadLink.download = getOutputFileName(type, originalFileName);
-                document.getElementById('downloadButton').style.display = 'block';
-            } else {
-                 document.getElementById('downloadButton').style.display = 'none';
-            }
-        }
-
-        function getOutputFileName(type, originalName) {
-            let baseName = originalName;
-            if (type === 'file') {
-                const fileInput = document.getElementById('fileInput');
-                if (fileInput.files.length > 0) {
-                    baseName = fileInput.files[0].name;
-                }
-            } else if (type === 'url') {
-                const urlInput = document.getElementById('urlInput').value.trim();
-                try {
-                    const url = new URL(urlInput);
-                    const pathParts = url.pathname.split('/');
-                    baseName = pathParts[pathParts.length - 1] || 'playlist.m3u';
-                    baseName = baseName.split('?')[0];
-                } catch (e) {
-                    baseName = 'playlist.m3u';
-                }
-            } else {
-                baseName = 'pasted_streams.m3u';
-            }
-
-            if (!baseName.endsWith('.m3u') && !baseName.endsWith('.m3u8')) {
-                baseName += '.m3u';
-            }
-
-            const lastDotIndex = baseName.lastIndexOf('.');
-            if (lastDotIndex !== -1) {
-                return `${baseName.substring(0, lastDotIndex)}_checked${baseName.substring(lastDotIndex)}`;
-            }
-            return `${baseName}_checked.m3u`;
-        }
-
-
-        async function processM3U() {
-            const fileInput = document.getElementById('fileInput');
-            if (!fileInput.files.length) return alert('Please upload an M3U file.');
-            const fileName = fileInput.files[0].name;
-            const text = await fileInput.files[0].text();
-            await processLinks(text, 'file', fileName);
-        }
-
-        async function processOnlineM3U() {
-            const urlInput = document.getElementById('urlInput').value.trim();
-            if (!urlInput) return alert('Please enter an online M3U URL.');
-            try {
-                const controller = new AbortController();
-                controllers['urlFetch'] = controller;
-                document.getElementById('currentChecking').textContent = "Fetching online M3U file...";
-                setDisplayStates(true);
-                const response = await fetch(urlInput, { signal: controller.signal });
-                if (!response.ok) throw new Error(`Failed to fetch M3U file: ${response.status} ${response.statusText}`);
-                const text = await response.text();
-                await processLinks(text, 'url', urlInput);
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    document.getElementById('currentChecking').textContent = "Online M3U fetch cancelled.";
-                } else {
-                    alert(`Error fetching online M3U file: ${error.message}`);
-                    document.getElementById('currentChecking').textContent = `Error fetching online M3U file: ${error.message}`;
-                }
-                toggleButtons('url', false);
-                resetOutput();
-            } finally {
-                delete controllers['urlFetch'];
-            }
-        }
-
-        async function processTextM3U() {
-            const textInput = document.getElementById('textInput').value;
-            if (!textInput.trim()) return alert('Please paste M3U content.');
-            await processLinks(textInput, 'text', 'pasted_streams.m3u');
-        }
-
-        function cancelProcess(type) {
-            isCancelled[type] = true;
-            if (type === 'url' && controllers['urlFetch']) {
-                controllers['urlFetch'].abort();
-            }
-            // Abort all in-flight link checks
-            for (const url in controllers) {
-                if (controllers.hasOwnProperty(url)) {
-                    controllers[url].abort();
-                }
-            }
-            // `processLinks` will detect `isCancelled` and proceed to display partial results.
-            // The `currentChecking` message will be updated in `processLinks`'s final step.
-        }
-    </script>
+function cancelProcess(type) {
+  isCancelled[type] = true;
+  isPaused[type] = false;
+  if (type === 'url' && controllers['urlFetch']) {
+    controllers['urlFetch'].abort();
+  }
+  for (const url in controllers) {
+    if (controllers.hasOwnProperty(url)) {
+      controllers[url].abort();
+    }
+  }
+}
+</script>
 </body>
 </html>
